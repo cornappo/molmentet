@@ -2,77 +2,98 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Mappa e Street View - Google Maps Style</title>
+    <title>Mappa e Street View - Accesso Riservato</title>
     <link rel="stylesheet" href="style.css">
     <!-- Google Material Icons per lo stile coerente con Maps -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- Google Identity Services per il Login -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 
-    <!-- Pannello Laterale Sinistro con Linguetta integrata -->
-    <div id="sidebar" class="sidebar">
-        <div class="sidebar-header">
-            <h3>Indicazioni stradali</h3>
-            <button class="icon-btn" onclick="toggleSidebar()" title="Chiudi riquadro"><span class="material-icons">close</span></button>
-        </div>
-
-        <div class="controls-content">
-            <!-- Modalità di viaggio (Icone stile Google Maps) -->
-            <div id="travel-modes" class="travel-modes-container">
-                <button class="travel-mode-btn active" onclick="setTravelMode('DRIVING', this)" title="Auto"><span class="material-icons">directions_car</span></button>
-                <button class="travel-mode-btn" onclick="setTravelMode('WALKING', this)" title="A piedi"><span class="material-icons">directions_walk</span></button>
-                <button class="travel-mode-btn" onclick="setTravelMode('BICYCLING', this)" title="In bicicletta" style="display:none;"></button>
-            </div>
-            <input type="hidden" id="travel-mode" value="DRIVING">
+    <!-- SCHERMATA DI BACKOFFICE / LOGIN (Visibile solo agli utenti non autenticati) -->
+    <div id="login-screen" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #f8f9fa; font-family: Arial, sans-serif;">
+        <div style="background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); text-align: center; max-width: 400px; width: 100%;">
+            <span class="material-icons" style="font-size: 48px; color: #1a73e8; margin-bottom: 16px;">lock_person</span>
+            <h2 style="margin-bottom: 8px; color: #202124;">Area Riservata</h2>
+            <p style="color: #5f6368; font-size: 14px; margin-bottom: 24px;">Effettua l'accesso con un account autorizzato per utilizzare l'applicazione cartografica.</p>
             
-            <!-- Input Partenza e Arrivo con icone a pallino -->
-            <div class="route-inputs-box">
-                <div class="input-row-gmaps">
-                    <span class="material-icons point-icon origin-dot">trip_origin</span>
-                    <input type="text" id="origin-input" placeholder="Scegli il punto di partenza o clicca sulla mappa">
-                    <span class="status-check" id="check-origin">✓</span>
-                </div>
-
-                <div id="tappe-container"></div>
-                <button class="text-btn" onclick="aggiungiTappaIntermedia()">+ Aggiungi tappa</button>
-
-                <div class="input-row-gmaps">
-                    <span class="material-icons point-icon dest-dot">location_on</span>
-                    <input type="text" id="destination-input" placeholder="Scegli la destinazione">
-                    <span class="status-check" id="check-dest">✓</span>
-                </div>
-            </div>
-
-            <button id="submit-route" class="primary-btn" onclick="calcolaPercorso()">Calcola Percorso</button>
+            <!-- Pulsante Google Login -->
+            <div id="buttonDiv" style="display: flex; justify-content: center;"></div>
             
-            <div id="route-info" class="route-info-box" style="display:none;">
-                <b>Distanza:</b> <span id="info-distanza">0 km</span><br>
-                <span id="info-dislivello">Dislivello: ~0m</span>
-            </div>
-
-            <div id="post-calc-controls" class="post-calc-actions" style="display:none;">
-                <button class="secondary-btn" onclick="invertiPercorso()"><span class="material-icons">swap_vert</span> Inverti</button>
-                <button class="secondary-btn" onclick="mostraPulsanteCalcola()">Modifica</button>
-            </div>
-
-            <div class="gpx-import-box">
-                <label class="file-label">Importa GPX <input type="file" id="gpx-file" accept=".gpx" onchange="importaGPX(event)" style="display:none;"></label>
-            </div>
-
-            <div id="buttonDiv" class="google-auth-box"></div>
-            <div id="user-info"></div>
+            <div id="login-error" style="color: #d93025; font-size: 13px; margin-top: 15px;"></div>
         </div>
-
-        <!-- Linguetta laterale per aprire/chiudere il pannello -->
-        <button id="sidebar-toggle" class="sidebar-toggle-btn" onclick="toggleSidebar()" title="Apri riquadro">
-            <span class="material-icons" id="toggle-icon-symbol">chevron_left</span>
-        </button>
     </div>
 
-    <!-- Contenitore Principale Diviso a Metà (Mappa + Street View) -->
-    <div id="split-container">
-        <div id="map"></div>
-        <div id="pano"></div>
+    <!-- CONTENITORE PRINCIPALE DELL'APP (Nascosto finché non si effettua il login) -->
+    <div id="app-container" style="display: none; width: 100vw; height: 100vh; position: relative;">
+        
+        <!-- Pannello Laterale Sinistro con Linguetta integrata -->
+        <div id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <h3>Indicazioni stradali</h3>
+                <button class="icon-btn" onclick="toggleSidebar()" title="Chiudi riquadro"><span class="material-icons">close</span></button>
+            </div>
+
+            <div class="controls-content">
+                <!-- Modalità di viaggio (Icone stile Google Maps) -->
+                <div id="travel-modes" class="travel-modes-container">
+                    <button class="travel-mode-btn active" onclick="setTravelMode('DRIVING', this)" title="Auto"><span class="material-icons">directions_car</span></button>
+                    <button class="travel-mode-btn" onclick="setTravelMode('WALKING', this)" title="A piedi"><span class="material-icons">directions_walk</span></button>
+                    <button class="travel-mode-btn" onclick="setTravelMode('BICYCLING', this)" title="In bicicletta" style="display:none;"></button>
+                </div>
+                <input type="hidden" id="travel-mode" value="DRIVING">
+                
+                <!-- Input Partenza e Arrivo con icone a pallino -->
+                <div class="route-inputs-box">
+                    <div class="input-row-gmaps">
+                        <span class="material-icons point-icon origin-dot">trip_origin</span>
+                        <input type="text" id="origin-input" placeholder="Scegli il punto di partenza o clicca sulla mappa">
+                        <span class="status-check" id="check-origin">✓</span>
+                    </div>
+
+                    <div id="tappe-container"></div>
+                    <button class="text-btn" onclick="aggiungiTappaIntermedia()">+ Aggiungi tappa</button>
+
+                    <div class="input-row-gmaps">
+                        <span class="material-icons point-icon dest-dot">location_on</span>
+                        <input type="text" id="destination-input" placeholder="Scegli la destinazione">
+                        <span class="status-check" id="check-dest">✓</span>
+                    </div>
+                </div>
+
+                <button id="submit-route" class="primary-btn" onclick="calcolaPercorso()">Calcola Percorso</button>
+                
+                <div id="route-info" class="route-info-box" style="display:none;">
+                    <b>Distanza:</b> <span id="info-distanza">0 km</span><br>
+                    <span id="info-dislivello">Dislivello: ~0m</span>
+                </div>
+
+                <div id="post-calc-controls" class="post-calc-actions" style="display:none;">
+                    <button class="secondary-btn" onclick="invertiPercorso()"><span class="material-icons">swap_vert</span> Inverti</button>
+                    <button class="secondary-btn" onclick="modificaPercorso ? modificaPercorso() : mostraPulsanteCalcola()">Modifica</button>
+                </div>
+
+                <div class="gpx-import-box">
+                    <label class="file-label">Importa GPX <input type="file" id="gpx-file" accept=".gpx" onchange="importaGPX(event)" style="display:none;"></label>
+                </div>
+
+                <!-- Info utente loggato / Logout -->
+                <div id="user-info" style="margin-top: 15px; display: none; align-items: center; justify-content: space-between; font-size: 13px; background: #f1f3f4; padding: 8px; border-radius: 4px;"></div>
+            </div>
+
+            <!-- Linguetta laterale per aprire/chiudere il pannello -->
+            <button id="sidebar-toggle" class="sidebar-toggle-btn" onclick="toggleSidebar()" title="Apri riquadro">
+                <span class="material-icons" id="toggle-icon-symbol">chevron_left</span>
+            </button>
+        </div>
+
+        <!-- Contenitore Principale Diviso a Metà (Mappa + Street View) -->
+        <div id="split-container">
+            <div id="map"></div>
+            <div id="pano"></div>
+        </div>
+
     </div>
 
     <script src="script.js" defer></script>
