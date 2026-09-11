@@ -345,6 +345,7 @@
         let userHasRotatedSV = false;
         let currentRoutePath = [];
         let routeArrows = [];
+        let isUpdatingFromMap = false; // Flag per evitare loop di eventi
 
         function log(msg) {
             const logBox = document.getElementById("system-log");
@@ -381,18 +382,26 @@
                 suppressMarkers: true 
             });
 
-            // Sincronizzazione Mappa -> Street View tramite click
+            // Sincronizzazione Mappa -> Street View tramite click con controllo raggio panorama
             map.addListener("click", (event) => {
                 log(`Click su mappa: ${event.latLng.lat().toFixed(4)}, ${event.latLng.lng().toFixed(4)}`);
                 
-                // Aggiorna la posizione dello Street View al punto cliccato
-                panorama.setPosition(event.latLng);
-                
-                // Se c'è un percorso attivo, allinea la vista alla direzione stradale
-                if (currentRoutePath.length > 0) {
-                    userHasRotatedSV = false;
-                    allineaStreetViewAllaStrada(event.latLng);
-                }
+                const svService = new google.maps.StreetViewService();
+                svService.getPanorama({ location: event.latLng, radius: 100 }, (data, status) => {
+                    if (status === "OK") {
+                        isUpdatingFromMap = true;
+                        panorama.setPosition(data.location.latLng);
+                        isUpdatingFromMap = false;
+
+                        if (currentRoutePath.length > 0) {
+                            userHasRotatedSV = false;
+                            allineaStreetViewAllaStrada(data.location.latLng);
+                        }
+                        log(`Street View contestuale aggiornato a ${data.location.latLng.lat().toFixed(4)}, ${data.location.latLng.lng().toFixed(4)}`);
+                    } else {
+                        log("Nessun panorama Street View disponibile nelle vicinanze del click.");
+                    }
+                });
 
                 aggiungiTappaDaClick(event.latLng);
             });
@@ -403,12 +412,15 @@
                 const svService = new google.maps.StreetViewService();
                 svService.getPanorama({ location: center, radius: 50 }, (data, status) => {
                     if (status === "OK") {
+                        isUpdatingFromMap = true;
                         panorama.setPosition(data.location.latLng);
+                        isUpdatingFromMap = false;
                         log(`Street View sincronizzato al centro mappa: ${data.location.latLng.lat().toFixed(4)}, ${data.location.latLng.lng().toFixed(4)}`);
                     }
                 });
             });
 
+            // Gestione posizione Street View senza generare loop sulla mappa
             panorama.addListener("position_changed", () => {
                 const pos = panorama.getPosition();
                 if (pos) {
@@ -429,7 +441,11 @@
                     } else {
                         markerGiallo.setPosition(pos);
                     }
-                    map.setCenter(pos);
+
+                    // Centra la mappa solo se lo spostamento non è partito direttamente da un click mappa già gestito
+                    if (!isUpdatingFromMap) {
+                        map.setCenter(pos);
+                    }
 
                     if (!userHasRotatedSV && currentRoutePath.length > 0) {
                         allineaStreetViewAllaStrada(pos);
@@ -547,7 +563,7 @@
                 document.getElementById(`check-${uniqueId}`).style.display = "block";
             }
             setupAutocomplete(uniqueId, `check-${uniqueId}`);
-            log("Tappa intermedie aggiunta.");
+            log("Tappa intermedia aggiunta.");
         }
 
         function aggiungiTappaDaClick(latLng) {
@@ -706,12 +722,12 @@
                     let gpxPath = [];
                     for (let i = 0; i < trkpts.length; i++) {
                         const lat = parseFloat(trkpts[i].getAttribute("lat"));
-                        const lon = parseFloat(trkpts[i].getAttribute("lon"));
+                        const lon = parseFloat(trkpts[i].getAttribute("lon") || trkpts[i].getAttribute("lon"));
                         gpxPath.push(new google.maps.LatLng(lat, lon));
                     }
                     
-                    document.getElementById("origin-input").value = `${trkpts[0].getAttribute("lat")}, ${trkpts[0].getAttribute("lng || lon")}`;
-                    document.getElementById("destination-input").value = `${trkpts[trkpts.length-1].getAttribute("lat")}, ${trkpts[trkpts.length-1].getAttribute("lng || lon")}`;
+                    document.getElementById("origin-input").value = `${trkpts[0].getAttribute("lat")}, ${trkpts[0].getAttribute("lon") || trkpts[0].getAttribute("lon")}`;
+                    document.getElementById("destination-input").value = `${trkpts[trkpts.length-1].getAttribute("lat")}, ${trkpts[trkpts.length-1].getAttribute("lon") || trkpts[trkpts.length-1].getAttribute("lon")}`;
                     
                     currentRoutePath = gpxPath;
                     disegnaFrecceDirezione(gpxPath);
@@ -738,7 +754,7 @@
         function importaMyMaps() {
             const url = prompt("Incolla il link o l'ID della mappa My Maps:");
             if(url) {
-                log("Colore/collegamento My Maps acquisito.");
+                log("Collegamento My Maps acquisito.");
                 alert("Mappa collegata correttamente.");
             }
         }
