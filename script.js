@@ -73,7 +73,7 @@ function initMap() {
 
     infoWindowHover = new google.maps.InfoWindow();
 
-    // Gestione interazioni mappa (senza anteprime durante il trascinamento)
+    // Gestione interazioni mappa
     map.addListener("mousedown", (event) => avviaTimerAnteprima(event.latLng));
     map.addListener("touchstart", (event) => {
         if (event.latLng) avviaTimerAnteprima(event.latLng);
@@ -82,6 +82,22 @@ function initMap() {
     map.addListener("dragstart", () => {
         cancellaTimerAnteprima();
         chiudiAnteprima();
+    });
+
+    // Aggiorna lo Street View e il pallino giallo quando l'utente finisce di trascinare la mappa
+    map.addListener("dragend", () => {
+        const center = map.getCenter();
+        if (center) {
+            const svService = new google.maps.StreetViewService();
+            svService.getPanorama({ location: center, radius: 100 }, (data, status) => {
+                if (status === "OK") {
+                    isUpdatingFromMap = true;
+                    panorama.setPosition(data.location.latLng);
+                    isUpdatingFromMap = false;
+                    log(`Mappa trascinata: Street View aggiornato a ${data.location.latLng.lat().toFixed(4)}, ${data.location.latLng.lng().toFixed(4)}`);
+                }
+            });
+        }
     });
 
     map.addListener("click", (event) => {
