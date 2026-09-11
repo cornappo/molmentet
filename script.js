@@ -330,7 +330,7 @@ function togglePlayRoute() {
                 }
                 log("Fine percorso raggiunta.");
             }
-        }, 1000); // 1 secondo a punto per ispezionare bene le rotatorie
+        }, 1000);
     }
 }
 
