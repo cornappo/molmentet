@@ -5,7 +5,14 @@ html, body {
     height: 100%;
     overflow: hidden;
     font-family: Roboto, Arial, sans-serif;
+}
+
+#app-container {
     display: flex;
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+    overflow: hidden;
 }
 
 /* Pannello Laterale Sinistro */
@@ -78,7 +85,7 @@ html, body {
 #split-container {
     display: flex;
     flex: 1;
-    height: 100vh;
+    height: 100%;
     width: 100%;
     position: relative;
     overflow: hidden;
