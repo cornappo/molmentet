@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Route & StreetView Sync</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body, html { width: 100%; height: 100%; overflow: hidden; font-family: sans-serif; }
+        
+        #app-container {
+            display: flex;
+            flex-direction: column;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        #map {
+            width: 100%;
+            height: 50%;
+        }
+        
+        #street-view {
+            width: 100%;
+            height: 50%;
+        }
+
+        @media (min-width: 768px) {
+            #app-container { flex-direction: row; }
+            #map { width: 50%; height: 100%; }
+            #street-view { width: 50%; height: 100%; }
+        }
+
+        #panel {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 5;
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        <div id="map"></div>
+        <div id="street-view"></div>
+    </div>
+
+    <div id="panel">
+        <b>Percorso:</b> Udine -> Nimis
+    </div>
+
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAspLrqw1G-5ogZVEAf_ZjniovFuS2emZA&callback=initMap"></script>
+
+    <script>
+        let map, panorama, directionsService, directionsRenderer;
+
+        function initMap() {
+            const udine = { lat: 46.061, lng: 13.234 };
+            map = new google.maps.Map(document.getElementById("map"), {
+                center: udine,
+                zoom: 14,
+                streetViewControl: false,
+                mapTypeControl: false
+            });
+
+            panorama = new google.maps.StreetViewPanorama(
+                document.getElementById("street-view"), {
+                    position: udine,
+                    pov: { heading: 34, pitch: 10 },
+                    enableCloseButton: false
+                }
+            );
+            map.setStreetView(panorama);
+
+            directionsService = new google.maps.DirectionsService();
+            directionsRenderer = new google.maps.DirectionsRenderer({
+                map: map,
+                preserveViewport: false
+            });
+
+            calcolaPercorso();
+
+            map.addListener("idle", () => {
+                const center = map.getCenter();
+                const svService = new google.maps.StreetViewService();
+                
+                svService.getPanorama({ location: center, radius: 50 }, (data, status) => {
+                    if (status === "OK") {
+                        panorama.setPosition(data.location.latLng);
+                    }
+                });
+            });
+        }
+
+        function calcolaPercorso() {
+            const request = {
+                origin: "Udine, IT",
+                destination: "Nimis, IT",
+                travelMode: google.maps.TravelMode.DRIVING,
+                provideRouteAlternatives: true
+            };
+
+            directionsService.route(request, (result, status) => {
+                if (status == "OK") {
+                    directionsRenderer.setDirections(result);
+                }
+            });
+        }
+    </script>
+</body>
+</html>
