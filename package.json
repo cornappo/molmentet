@@ -1,11 +1,13 @@
 {
   "name": "mappa-app",
   "version": "1.0.0",
+  "description": "swipe on google maps, sync on streetview, in dual screen",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "express": "^4.18.2"
+    "axios": "^1.7.0",
+    "express": "^4.19.2"
   }
 }
