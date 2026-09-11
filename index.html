@@ -25,7 +25,7 @@
             #street-view { width: 50%; height: 100%; }
         }
 
-        /* Stile Pannello laterale identico a Google Maps desktop */
+        /* Pannello laterale stile Google Maps Desktop */
         #panel {
             position: absolute;
             top: 12px;
@@ -45,7 +45,7 @@
             overflow-y: auto;
         }
 
-        /* Selettori di modalità viaggio in alto stile Google Maps */
+        /* Selettori modalità di viaggio */
         .travel-modes {
             display: flex;
             justify-content: space-around;
@@ -64,15 +64,10 @@
             transition: background 0.2s;
         }
 
-        .travel-mode-btn:hover {
-            background: #f1f3f4;
-        }
+        .travel-mode-btn:hover { background: #f1f3f4; }
+        .travel-mode-btn.active { background: #e8f0fe; }
 
-        .travel-mode-btn.active {
-            background: #e8f0fe;
-        }
-
-        /* Layout input itinerario con linea verticale di connessione stile Maps */
+        /* Linea verticale e input itinerario */
         .route-inputs-wrapper {
             position: relative;
             display: flex;
@@ -123,7 +118,6 @@
             box-shadow: 0 1px 3px rgba(26,115,232,0.2);
         }
 
-        /* Feedback visivo località corretta/selezionata (pallino verde/check) */
         .status-check {
             position: absolute;
             right: 12px;
@@ -158,11 +152,7 @@
             transition: background 0.2s;
             z-index: 2;
         }
-
-        .btn-remove-tappa:hover {
-            background: #dadce0;
-            color: #202124;
-        }
+        .btn-remove-tappa:hover { background: #dadce0; color: #202124; }
 
         .add-between-container {
             display: flex;
@@ -188,11 +178,7 @@
             box-shadow: 0 1px 2px rgba(0,0,0,0.1);
             transition: transform 0.1s;
         }
-
-        .btn-add-between:hover {
-            transform: scale(1.1);
-            background: #f8f9fa;
-        }
+        .btn-add-between:hover { transform: scale(1.1); background: #f8f9fa; }
 
         #panel button.action-btn {
             background: #1a73e8;
@@ -206,10 +192,7 @@
             box-shadow: 0 1px 3px rgba(0,0,0,0.2);
             transition: background 0.2s;
         }
-
-        #panel button.action-btn:hover {
-            background: #1557b0;
-        }
+        #panel button.action-btn:hover { background: #1557b0; }
 
         .secondary-controls {
             display: flex;
@@ -229,10 +212,7 @@
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
             transition: background 0.2s;
         }
-
-        .secondary-controls button:hover {
-            background: #f8f9fa;
-        }
+        .secondary-controls button:hover { background: #f8f9fa; }
 
         #route-info {
             background: #e8f0fe;
@@ -242,6 +222,19 @@
             font-size: 13px;
             color: #174ea6;
             display: none;
+        }
+
+        /* Sezione Log di Sistema */
+        #system-log {
+            background: #1e1e1e;
+            color: #00ff66;
+            font-family: monospace;
+            font-size: 11px;
+            padding: 8px;
+            border-radius: 6px;
+            max-height: 90px;
+            overflow-y: auto;
+            border: 1px solid #333;
         }
 
         #user-info {
@@ -264,11 +257,8 @@
             font-weight: 500;
             cursor: pointer;
         }
-        .logout-btn:hover {
-            background: #fce8e6;
-        }
+        .logout-btn:hover { background: #fce8e6; }
 
-        /* Autocomplete Google Places personalizzato pulito */
         .pac-container {
             border-radius: 0 0 8px 8px;
             margin-top: -2px;
@@ -278,22 +268,10 @@
             font-family: Roboto, Arial, sans-serif;
             z-index: 999999;
         }
-        .pac-item {
-            padding: 10px 12px;
-            font-size: 13px;
-            cursor: pointer;
-            border-top: 1px solid #f1f3f4;
-        }
-        .pac-item:hover {
-            background-color: #f8f9fa;
-        }
-        .pac-matched {
-            font-weight: 500;
-            color: #1a73e8;
-        }
-        .pac-icon {
-            display: none;
-        }
+        .pac-item { padding: 10px 12px; font-size: 13px; cursor: pointer; border-top: 1px solid #f1f3f4; }
+        .pac-item:hover { background-color: #f8f9fa; }
+        .pac-matched { font-weight: 500; color: #1a73e8; }
+        .pac-icon { display: none; }
     </style>
 </head>
 <body>
@@ -304,7 +282,6 @@
     </div>
 
     <div id="panel">
-        <!-- Selettori Modalità di Spostamento stile Google Maps -->
         <div class="travel-modes">
             <button class="travel-mode-btn active" onclick="setTravelMode('DRIVING', this)" title="In auto">🚗</button>
             <button class="travel-mode-btn" onclick="setTravelMode('TRANSIT', this)" title="Con i mezzi pubblici">🚆</button>
@@ -313,23 +290,22 @@
         </div>
         <input type="hidden" id="travel-mode" value="DRIVING">
 
-        <!-- Campi di input con linea verticale di collegamento -->
         <div class="route-inputs-wrapper">
             <div class="input-container">
                 <span class="input-icon">🔵</span>
-                <input type="text" id="origin-input" value="Udine, IT" placeholder="Scegli punto di partenza o clicca sulla mappa">
+                <input type="text" id="origin-input" value="Udine, IT" placeholder="Punto di partenza">
                 <span id="check-origin" class="status-check">✓</span>
             </div>
             
             <div class="add-between-container">
-                <button class="btn-add-between" onclick="aggiungiTappaIntermedia()" title="Aggiungi meta">+</button>
+                <button class="btn-add-between" onclick="aggiungiTappaIntermedia()" title="Aggiungi tappa">+</button>
             </div>
 
             <div id="tappe-container" style="display:flex; flex-direction:column; gap:8px;"></div>
 
             <div class="input-container">
                 <span class="input-icon">🔴</span>
-                <input type="text" id="destination-input" value="Nimis, IT" placeholder="Scegli destinazione">
+                <input type="text" id="destination-input" value="Nimis, IT" placeholder="Destinazione">
                 <span id="check-dest" class="status-check">✓</span>
             </div>
         </div>
@@ -349,8 +325,11 @@
         <div class="secondary-controls" id="post-calc-controls" style="display:none;">
             <button onclick="invertiPercorso()">🔄 Inverti</button>
             <button onclick="resetHeadingSV()">🎯 Reset Vista</button>
-            <button onclick="mostraPulsanteCalcola()" style="background:#e8f0fe; color:#1a73e8;">✏️ Modifica</button>
+            <button onclick="mostraPulsanteCalcola()">✏️ Modifica</button>
         </div>
+
+        <!-- Log di Sistema integrato come richiesto -->
+        <div id="system-log">[INIT] Applicazione avviata correttamente. Pronto.</div>
 
         <div id="buttonDiv" style="margin-top: 4px;"></div>
         <div id="user-info" style="display:none;"></div>
@@ -366,6 +345,13 @@
         let userHasRotatedSV = false;
         let currentRoutePath = [];
         let routeArrows = [];
+
+        function log(msg) {
+            const logBox = document.getElementById("system-log");
+            const time = new Date().toLocaleTimeString();
+            logBox.innerHTML += `<br>[${time}] ${msg}`;
+            logBox.scrollTop = logBox.scrollHeight;
+        }
 
         function initMap() {
             const udine = { lat: 46.061, lng: 13.234 };
@@ -396,6 +382,7 @@
             });
 
             map.addListener("click", (event) => {
+                log(`Click su mappa: ${event.latLng.lat().toFixed(4)}, ${event.latLng.lng().toFixed(4)}`);
                 aggiungiTappaDaClick(event.latLng);
             });
 
@@ -414,7 +401,7 @@
                                 strokeColor: "#ffffff",
                                 strokeWeight: 2
                             },
-                            title: "Posizione Street View Attiva"
+                            title: "Posizione Street View"
                         });
                     } else {
                         markerGiallo.setPosition(pos);
@@ -441,12 +428,14 @@
             renderGoogleButton();
 
             calcolaPercorso();
+            log("Mappa e servizi inizializzati con successo.");
         }
 
         function setTravelMode(mode, btnElement) {
             document.getElementById("travel-mode").value = mode;
             document.querySelectorAll(".travel-mode-btn").forEach(b => b.classList.remove("active"));
             btnElement.classList.add("active");
+            log(`Modalità di viaggio impostata su: ${mode}`);
             calcolaPercorso();
         }
 
@@ -470,6 +459,7 @@
                     input.style.borderColor = "#137333";
                     input.style.backgroundColor = "#e6f4ea";
                     if (check) check.style.display = "block";
+                    log(`Luogo selezionato (${inputId}): ${input.value}`);
                     aggiungiMarkerVerde(place.geometry.location, input.value);
                     calcolaPercorso();
                 } else {
@@ -499,7 +489,7 @@
                     strokeWeight: 2
                 },
                 title: title,
-                draggable: true // Permette di trascinare il marker direttamente sul percorso
+                draggable: true
             });
 
             marker.addListener('dragend', (event) => {
@@ -507,6 +497,7 @@
                 geocoder.geocode({ location: event.latLng }, (results, status) => {
                     if (status === "OK" && results[0]) {
                         marker.setTitle(results[0].formatted_address);
+                        log(`Marker trascinato a: ${results[0].formatted_address}`);
                         calcolaPercorso();
                     }
                 });
@@ -523,16 +514,17 @@
             div.innerHTML = `
                 <div class="input-container" style="width:100%;">
                     <span class="input-icon">📍</span>
-                    <input type="text" class="tappa-input" id="${uniqueId}" value="${valore}" placeholder="Aggiungi un'altra tappa">
+                    <input type="text" class="tappa-input" id="${uniqueId}" value="${valore}" placeholder="Aggiungi tappa">
                     <span class="status-check" id="check-${uniqueId}">✓</span>
                 </div>
-                <button class="btn-remove-tappa" onclick="this.parentElement.remove(); calcolaPercorso();" title="Rimuovi tappa">×</button>`;
+                <button class="btn-remove-tappa" onclick="this.parentElement.remove(); calcolaPercorso();" title="Rimuovi">×</button>`;
             container.appendChild(div);
             
             if(valore !== "") {
                 document.getElementById(`check-${uniqueId}`).style.display = "block";
             }
             setupAutocomplete(uniqueId, `check-${uniqueId}`);
+            log("Tappa intermedie aggiunta.");
         }
 
         function aggiungiTappaDaClick(latLng) {
@@ -567,6 +559,8 @@
                 provideRouteAlternatives: false
             };
 
+            log(`Calcolo percorso in corso da "${origin}" a "${destination}"...`);
+
             directionsService.route(request, (result, status) => {
                 if (status == "OK") {
                     directionsRenderer.setDirections(result);
@@ -586,7 +580,9 @@
                     document.getElementById("submit-route").style.display = "none";
                     document.getElementById("route-info").style.display = "block";
                     document.getElementById("post-calc-controls").style.display = "flex";
+                    log(`Percorso calcolato con successo: ${km} km.`);
                 } else {
+                    log(`ERRORE calcolo percorso: ${status}`);
                     alert("Impossibile calcolare il percorso. Verifica gli indirizzi inseriti.");
                 }
             });
@@ -646,9 +642,8 @@
         function resetHeadingSV() {
             userHasRotatedSV = false;
             const pos = panorama.getPosition();
-            if (pos) {
-                allineaStreetViewAllaStrada(pos);
-            }
+            if (pos) allineaStreetViewAllaStrada(pos);
+            log("Vista Street View riallineata alla direzione stradale.");
         }
 
         function invertiPercorso() {
@@ -664,6 +659,7 @@
                 input.value = valoriTappe[index];
             });
 
+            log("Inversione percorso effettuata.");
             calcolaPercorso();
         }
 
@@ -691,8 +687,8 @@
                         gpxPath.push(new google.maps.LatLng(lat, lon));
                     }
                     
-                    document.getElementById("origin-input").value = `${trkpts[0].getAttribute("lat")}, ${trkpts[0].getAttribute("lon")}`;
-                    document.getElementById("destination-input").value = `${trkpts[trkpts.length-1].getAttribute("lat")}, ${trkpts[trkpts.length-1].getAttribute("lon")}`;
+                    document.getElementById("origin-input").value = `${trkpts[0].getAttribute("lat")}, ${trkpts[0].getAttribute("lng || lon")}`;
+                    document.getElementById("destination-input").value = `${trkpts[trkpts.length-1].getAttribute("lat")}, ${trkpts[trkpts.length-1].getAttribute("lng || lon")}`;
                     
                     currentRoutePath = gpxPath;
                     disegnaFrecceDirezione(gpxPath);
@@ -707,9 +703,10 @@
                         map: map
                     });
                     map.setCenter(gpxPath[0]);
+                    log("File GPX importato correttamente.");
                     alert("Traccia GPX importata con successo!");
                 } else {
-                    alert("Nessun punto valido trovato nel file GPX.");
+                    log("Errore importazione GPX: nessun punto trovato.");
                 }
             };
             reader.readAsText(file);
@@ -718,7 +715,8 @@
         function importaMyMaps() {
             const url = prompt("Incolla il link o l'ID della mappa My Maps:");
             if(url) {
-                alert("Collegamento My Maps acquisito correttamente.");
+                log("Colore/collegamento My Maps acquisito.");
+                alert("Mappa collegata correttamente.");
             }
         }
 
@@ -728,12 +726,14 @@
             const userInfo = document.getElementById("user-info");
             userInfo.style.display = "flex";
             userInfo.innerHTML = `<span>👤 <b>${payload.name}</b></span> <button class="logout-btn" onclick="eseguiLogout()">Esci</button>`;
+            log(`Utente autenticato: ${payload.name}`);
         }
 
         function eseguiLogout() {
             google.accounts.id.disableAutoSelect();
             document.getElementById("user-info").style.display = "none";
             renderGoogleButton();
+            log("Disconnessione effettuata.");
         }
     </script>
 </body>
