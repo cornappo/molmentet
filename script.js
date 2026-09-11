@@ -6,6 +6,7 @@ let currentRoutePath = [];
 let allowFreeMovement = false;
 let isUpdatingFromMap = false;
 let userHasRotatedSV = false;
+let longPressTimer = null;
 
 function log(msg) {
     console.log(`[LOG] ${msg}`);
@@ -46,7 +47,7 @@ function initMap() {
         map: null,
         icon: {
             path: google.maps.SymbolPath.CIRCLE,
-            scale: 5,
+            scale: 6,
             fillColor: "#ea4335",
             fillOpacity: 1,
             strokeColor: "#ffffff",
@@ -56,35 +57,27 @@ function initMap() {
 
     infoWindowHover = new google.maps.InfoWindow();
 
-    map.addListener("mousemove", (event) => {
-        const targetPos = event.latLng;
-        markerHover.setPosition(targetPos);
-        if (!markerHover.getMap()) markerHover.setMap(map);
-
-        fetch('/api/config').then(res => res.json()).then(data => {
-            const streetViewImgUrl = `https://maps.googleapis.com/maps/api/streetview?size=180x110&location=${targetPos.lat()},${targetPos.lng()}&fov=90&heading=235&pitch=10&key=${data.apiKey}`;
-            const contentString = `
-                <div class="sv-preview-box">
-                    <b>Anteprima Street View</b><br>
-                    <img src="${streetViewImgUrl}" alt="Street View Preview" onerror="this.style.display='none'">
-                </div>
-            `;
-            infoWindowHover.setContent(contentString);
-            infoWindowHover.open(map, markerHover);
-        });
+    // Gestione interazioni mappa (senza anteprime durante il trascinamento)
+    map.addListener("mousedown", (event) => avviaTimerAnteprima(event.latLng));
+    map.addListener("touchstart", (event) => {
+        if (event.latLng) avviaTimerAnteprima(event.latLng);
     });
 
-    map.getDiv().addEventListener("mouseleave", () => {
-        markerHover.setMap(null);
-        infoWindowHover.close();
+    map.addListener("dragstart", () => {
+        cancellaTimerAnteprima();
+        chiudiAnteprima();
     });
 
     map.addListener("click", (event) => {
+        cancellaTimerAnteprima();
+        chiudiAnteprima();
         log(`Click su mappa: ${event.latLng.lat().toFixed(4)}, ${event.latLng.lng().toFixed(4)}`);
         aggiungiTappaDaClick(event.latLng);
     });
 
     map.addListener("dblclick", (event) => {
+        cancellaTimerAnteprima();
+        chiudiAnteprima();
         log(`Doppio click su mappa: posizionamento libero attivato.`);
         allowFreeMovement = true;
         const svService = new google.maps.StreetViewService();
@@ -95,30 +88,6 @@ function initMap() {
                 isUpdatingFromMap = false;
             }
         });
-    });
-
-    map.addListener("dragend", () => {
-        allowFreeMovement = false;
-        const screenCenter = map.getCenter();
-        
-        if (currentRoutePath.length > 0) {
-            let closestPoint = trovaPuntoPiuVicinoSulPercorso(screenCenter);
-            if (closestPoint) {
-                isUpdatingFromMap = true;
-                panorama.setPosition(closestPoint);
-                isUpdatingFromMap = false;
-                log(`Mappa trascinata: pallino e Street View ricalcolati sulla parte centrale visibile.`);
-            }
-        } else {
-            const svService = new google.maps.StreetViewService();
-            svService.getPanorama({ location: screenCenter, radius: 50 }, (data, status) => {
-                if (status === "OK") {
-                    isUpdatingFromMap = true;
-                    panorama.setPosition(data.location.latLng);
-                    isUpdatingFromMap = false;
-                }
-            });
-        }
     });
 
     panorama.addListener("position_changed", () => {
@@ -151,6 +120,7 @@ function initMap() {
                 map.setCenter(pos);
             }
 
+            // Allineamento automatico Street View alla direzione di marcia
             if (!userHasRotatedSV && currentRoutePath.length > 0) {
                 allineaStreetViewAllaStrada(pos);
             }
@@ -174,6 +144,43 @@ function initMap() {
 
     calcolaPercorso();
     log("Mappa e servizi inizializzati con successo.");
+}
+
+function avviaTimerAnteprima(latLng) {
+    cancellaTimerAnteprima();
+    // Richiede ~600ms di pressione prolungata (long-press) per evitare attivazioni accidentali o durante il drag
+    longPressTimer = setTimeout(() => {
+        mostraAnteprimaStreetView(latLng);
+    }, 600);
+}
+
+function cancellaTimerAnteprima() {
+    if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+    }
+}
+
+function chiudiAnteprima() {
+    markerHover.setMap(null);
+    infoWindowHover.close();
+}
+
+function mostraAnteprimaStreetView(targetPos) {
+    markerHover.setPosition(targetPos);
+    if (!markerHover.getMap()) markerHover.setMap(map);
+
+    fetch('/api/config').then(res => res.json()).then(data => {
+        const streetViewImgUrl = `https://maps.googleapis.com/maps/api/streetview?size=200x120&location=${targetPos.lat()},${targetPos.lng()}&fov=90&heading=235&pitch=10&key=${data.apiKey}`;
+        const contentString = `
+            <div class="sv-preview-box" style="text-align:center;">
+                <b style="font-size:12px; color:#202124;">Anteprima Street View</b><br>
+                <img src="${streetViewImgUrl}" alt="Street View Preview" style="border-radius:4px; margin-top:4px;" onerror="this.style.display='none'">
+            </div>
+        `;
+        infoWindowHover.setContent(contentString);
+        infoWindowHover.open(map, markerHover);
+    });
 }
 
 function trovaPuntoPiuVicinoSulPercorso(targetPos) {
