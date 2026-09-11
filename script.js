@@ -109,9 +109,12 @@ function initMap() {
     panorama.addListener("position_changed", () => {
         let pos = panorama.getPosition();
         if (pos) {
+            // Se esiste un percorso, il pallino giallo si posiziona rigorosamente sul punto più vicino del percorso
             if (currentRoutePath.length > 0 && !allowFreeMovement) {
                 let closestPoint = trovaPuntoPiuVicinoSulPercorso(pos);
-                if (closestPoint) pos = closestPoint;
+                if (closestPoint) {
+                    pos = closestPoint;
+                }
             }
 
             if (!markerGiallo) {
@@ -133,6 +136,8 @@ function initMap() {
                 markerGiallo.setMap(map);
             }
 
+            // Centra automaticamente la mappa sul pallino giallo (che si trova sul percorso)
+            // quando l'utente si sposta nello Street View, mantenendolo al centro della visuale.
             if (!isUpdatingFromMap) {
                 map.setCenter(pos);
             }
