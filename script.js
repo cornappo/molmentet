@@ -55,9 +55,9 @@ function handleCredentialResponse(response) {
         const payload = JSON.parse(atob(response.credential.split('.')[1]));
         log(`Utente autenticato con successo: ${payload.name} (${payload.email})`);
 
-        // Sblocca l'interfaccia nascondendo il login e mostrando l'app
+        // Sblocca l'interfaccia nascondendo il login e mostrando l'app con display flex
         document.getElementById("login-screen").style.display = "none";
-        document.getElementById("app-container").style.display = "block";
+        document.getElementById("app-container").style.display = "flex";
 
         const userInfo = document.getElementById("user-info");
         userInfo.style.display = "flex";
