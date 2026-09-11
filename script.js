@@ -5,7 +5,6 @@ let routeArrows = [];
 let currentRoutePath = [];
 let allowFreeMovement = false;
 let isUpdatingFromMap = false;
-let userHasRotatedSV = false;
 let longPressTimer = null;
 
 function log(msg) {
@@ -153,20 +152,15 @@ function initMap() {
             }
 
             // Centra automaticamente la mappa sul pallino giallo (che si trova sul percorso)
-            // quando l'utente si sposta nello Street View, mantenendolo al centro della visuale.
             if (!isUpdatingFromMap) {
                 map.setCenter(pos);
             }
 
-            // Allineamento automatico Street View alla direzione di marcia
-            if (!userHasRotatedSV && currentRoutePath.length > 0) {
+            // Allineamento automatico e costante dello Street View alla direzione di marcia
+            if (currentRoutePath.length > 0 && !allowFreeMovement) {
                 allineaStreetViewAllaStrada(pos);
             }
         }
-    });
-
-    panorama.addListener("pov_changed", () => {
-        userHasRotatedSV = true;
     });
 
     setupAutocomplete("origin-input", "check-origin");
