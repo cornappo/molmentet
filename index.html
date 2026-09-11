@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Route & StreetView Advanced Sync</title>
+    <title>Google Maps & StreetView Advanced Sync</title>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body, html { width: 100%; height: 100%; overflow: hidden; font-family: sans-serif; }
+        body, html { width: 100%; height: 100%; overflow: hidden; font-family: Roboto, Arial, sans-serif; }
         
         #app-container {
             display: flex;
@@ -25,107 +25,135 @@
             #street-view { width: 50%; height: 100%; }
         }
 
+        /* Look & Feel stile Google Maps (Card Flottante Bianca con ombra morbida) */
         #panel {
             position: absolute;
-            top: 10px;
-            left: 10px;
+            top: 12px;
+            left: 12px;
             z-index: 5;
             background: white;
-            padding: 12px;
+            padding: 16px;
             border-radius: 8px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-            font-size: 13px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2), 0 -1px 0px rgba(0,0,0,0.02);
+            font-size: 14px;
             display: flex;
             flex-direction: column;
-            gap: 6px;
-            max-width: 350px;
-            width: calc(100% - 20px);
-            max-height: calc(100vh - 20px);
+            gap: 10px;
+            max-width: 380px;
+            width: calc(100% - 24px);
+            max-height: calc(100vh - 24px);
             overflow-y: auto;
         }
 
-        #panel label {
-            font-weight: bold;
-            font-size: 11px;
-            color: #333;
+        .input-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 12px;
+            font-size: 16px;
+            color: #5f6368;
         }
 
         #panel input, #panel select {
             width: 100%;
-            padding: 7px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 13px;
+            padding: 10px 10px 10px 38px;
+            border: 1px solid #dadce0;
+            border-radius: 8px;
+            font-size: 14px;
+            background: #f8f9fa;
+            color: #3c4043;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        #panel input:focus, #panel select:focus {
+            background: #fff;
+            border-color: #1a73e8;
+            box-shadow: 0 1px 3px rgba(26,115,232,0.2);
+        }
+
+        /* Check verde di conferma località corretta */
+        .status-check {
+            position: absolute;
+            right: 12px;
+            color: #137333;
+            font-weight: bold;
+            font-size: 14px;
+            display: none;
         }
 
         .tappa-row {
             display: flex;
-            gap: 5px;
+            gap: 8px;
             align-items: center;
-        }
-
-        .btn-add-tappa {
-            background: #34a853;
-            color: white;
-            border: none;
-            width: 28px;
-            height: 28px;
-            border-radius: 4px;
-            font-weight: bold;
-            cursor: pointer;
-            font-size: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
+            position: relative;
         }
 
         .btn-remove-tappa {
-            background: #ea4335;
-            color: white;
+            background: #f1f3f4;
+            color: #5f6368;
             border: none;
-            width: 28px;
-            height: 28px;
-            border-radius: 4px;
+            width: 36px;
+            height: 38px;
+            border-radius: 8px;
             font-weight: bold;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 18px;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
+            transition: background 0.2s;
+        }
+
+        .btn-remove-tappa:hover {
+            background: #dadce0;
+            color: #202124;
         }
 
         .add-between-container {
             display: flex;
             justify-content: center;
-            margin: 2px 0;
+            margin: -2px 0;
         }
 
         .btn-add-between {
-            background: #f1f3f4;
+            background: #fff;
             color: #1a73e8;
-            border: 1px dashed #1a73e8;
+            border: 1px solid #dadce0;
             border-radius: 50%;
-            width: 22px;
-            height: 22px;
+            width: 24px;
+            height: 24px;
             font-weight: bold;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 16px;
             display: flex;
             align-items: center;
             justify-content: center;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            transition: transform 0.1s;
+        }
+
+        .btn-add-between:hover {
+            transform: scale(1.1);
+            background: #f8f9fa;
         }
 
         #panel button.action-btn {
             background: #1a73e8;
             color: white;
             border: none;
-            padding: 8px;
-            border-radius: 4px;
-            font-weight: bold;
+            padding: 10px;
+            border-radius: 8px;
+            font-weight: 500;
             cursor: pointer;
-            font-size: 13px;
+            font-size: 14px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            transition: background 0.2s;
         }
 
         #panel button.action-btn:hover {
@@ -134,47 +162,76 @@
 
         .secondary-controls {
             display: flex;
-            gap: 5px;
+            gap: 8px;
         }
 
         .secondary-controls button {
             flex: 1;
-            padding: 6px;
-            background: #f1f3f4;
+            padding: 8px;
+            background: #fff;
             border: 1px solid #dadce0;
-            border-radius: 4px;
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 11px;
-            font-weight: bold;
+            font-size: 12px;
+            font-weight: 500;
+            color: #3c4043;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            transition: background 0.2s;
+        }
+
+        .secondary-controls button:hover {
+            background: #f8f9fa;
         }
 
         #route-info {
-            background: #f8f9fa;
-            padding: 8px;
-            border-radius: 4px;
+            background: #e8f0fe;
+            padding: 10px;
+            border-radius: 8px;
             border-left: 4px solid #1a73e8;
-            font-size: 12px;
+            font-size: 13px;
+            color: #174ea6;
             display: none;
         }
 
         #user-info {
-            font-size: 12px;
-            color: #333;
-            border-top: 1px solid #eee;
-            padding-top: 6px;
+            font-size: 13px;
+            color: #3c4043;
+            border-top: 1px solid #e8eaed;
+            padding-top: 8px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
         .logout-btn {
-            background: #ea4335;
-            color: white;
-            border: none;
-            padding: 3px 8px;
-            border-radius: 3px;
-            font-size: 10px;
+            background: #f1f3f4;
+            color: #d93025;
+            border: 1px solid #dadce0;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 500;
             cursor: pointer;
+        }
+        .logout-btn:hover {
+            background: #fce8e6;
+        }
+
+        .pac-container {
+            border-radius: 8px;
+            margin-top: 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border: 1px solid #dadce0;
+            font-family: Roboto, Arial, sans-serif;
+            z-index: 999999;
+        }
+        .pac-item {
+            padding: 8px 12px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .pac-item:hover {
+            background-color: #f8f9fa;
         }
     </style>
 </head>
@@ -186,28 +243,30 @@
     </div>
 
     <div id="panel">
-        <div>
-            <label>Partenza:</label>
-            <input type="text" id="origin-input" value="Udine, IT">
+        <div class="input-container">
+            <span class="input-icon">📍</span>
+            <input type="text" id="origin-input" value="Udine, IT" placeholder="Scegli punto di partenza">
+            <span id="check-origin" class="status-check">✓</span>
         </div>
         
         <div class="add-between-container">
             <button class="btn-add-between" onclick="aggiungiTappaIntermedia()" title="Aggiungi tappa">+</button>
         </div>
 
-        <div id="tappe-container" style="display:flex; flex-direction:column; gap:5px;"></div>
+        <div id="tappe-container" style="display:flex; flex-direction:column; gap:8px;"></div>
 
-        <div>
-            <label>Destinazione:</label>
-            <input type="text" id="destination-input" value="Nimis, IT">
+        <div class="input-container">
+            <span class="input-icon">🏁</span>
+            <input type="text" id="destination-input" value="Nimis, IT" placeholder="Scegli destinazione">
+            <span id="check-dest" class="status-check">✓</span>
         </div>
 
-        <div>
-            <label>Mezzo di trasporto:</label>
+        <div class="input-container">
+            <span class="input-icon">🚗</span>
             <select id="travel-mode" onchange="calcolaPercorso()">
-                <option value="DRIVING">🚗 Macchina</option>
-                <option value="BICYCLING">🚲 Bici</option>
-                <option value="WALKING">🚶 Piedi</option>
+                <option value="DRIVING">In auto</option>
+                <option value="BICYCLING">In bicicletta</option>
+                <option value="WALKING">A piedi</option>
             </select>
         </div>
 
@@ -225,11 +284,11 @@
 
         <div class="secondary-controls" id="post-calc-controls" style="display:none;">
             <button onclick="invertiPercorso()">🔄 Inverti</button>
-            <button onclick="resetHeadingSV()">🎯 Reset Vista SV</button>
+            <button onclick="resetHeadingSV()">🎯 Reset Vista</button>
             <button onclick="mostraPulsanteCalcola()" style="background:#e8f0fe; color:#1a73e8;">✏️ Modifica</button>
         </div>
 
-        <div id="buttonDiv" style="margin-top: 2px;"></div>
+        <div id="buttonDiv" style="margin-top: 4px;"></div>
         <div id="user-info" style="display:none;"></div>
     </div>
 
@@ -242,6 +301,7 @@
         let routePolyline = null;
         let userHasRotatedSV = false;
         let currentRoutePath = [];
+        let routeArrows = [];
 
         function initMap() {
             const udine = { lat: 46.061, lng: 13.234 };
@@ -249,14 +309,17 @@
                 center: udine,
                 zoom: 14,
                 streetViewControl: false,
-                mapTypeControl: false
+                mapTypeControl: false,
+                fullscreenControl: false,
+                zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_BOTTOM }
             });
 
             panorama = new google.maps.StreetViewPanorama(
                 document.getElementById("street-view"), {
                     position: udine,
                     pov: { heading: 34, pitch: 10 },
-                    enableCloseButton: false
+                    enableCloseButton: false,
+                    zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_BOTTOM }
                 }
             );
             map.setStreetView(panorama);
@@ -304,10 +367,9 @@
                 userHasRotatedSV = true;
             });
 
-            setupAutocomplete("origin-input");
-            setupAutocomplete("destination-input");
+            setupAutocomplete("origin-input", "check-origin");
+            setupAutocomplete("destination-input", "check-dest");
 
-            // Google Identity Services Login Setup
             google.accounts.id.initialize({
                 client_id: "316037590804-ro5uvmlkhd5im3d610odd9vrkuu004ml.apps.googleusercontent.com",
                 callback: handleCredentialResponse
@@ -326,14 +388,21 @@
             );
         }
 
-        function setupAutocomplete(id) {
-            const input = document.getElementById(id);
+        function setupAutocomplete(inputId, checkId) {
+            const input = document.getElementById(inputId);
+            const check = document.getElementById(checkId);
+            
             const autocomplete = new google.maps.places.Autocomplete(input);
             autocomplete.addListener("place_changed", () => {
                 const place = autocomplete.getPlace();
                 if (place.geometry && place.geometry.location) {
                     aggiungiMarkerVerde(place.geometry.location, input.value);
+                    if (check) check.style.display = "block";
                 }
+            });
+
+            input.addEventListener("input", () => {
+                if (check) check.style.display = "none";
             });
         }
 
@@ -358,10 +427,20 @@
             const container = document.getElementById("tappe-container");
             const div = document.createElement("div");
             div.className = "tappa-row";
-            div.innerHTML = `<input type="text" class="tappa-input" value="${valore}" placeholder="Tappa intermedia">
-                             <button class="btn-remove-tappa" onclick="this.parentElement.remove(); calcolaPercorso();">×</button>`;
+            const uniqueId = "tappa-" + Date.now();
+            div.innerHTML = `
+                <div class="input-container" style="width:100%;">
+                    <span class="input-icon">📍</span>
+                    <input type="text" class="tappa-input" id="${uniqueId}" value="${valore}" placeholder="Tappa intermedia">
+                    <span class="status-check" id="check-${uniqueId}">✓</span>
+                </div>
+                <button class="btn-remove-tappa" onclick="this.parentElement.remove(); calcolaPercorso();" title="Rimuovi tappa">×</button>`;
             container.appendChild(div);
-            setupAutocomplete(div.querySelector("input"));
+            
+            if(valore !== "") {
+                document.getElementById(`check-${uniqueId}`).style.display = "block";
+            }
+            setupAutocomplete(uniqueId, `check-${uniqueId}`);
         }
 
         function aggiungiTappaDaClick(latLng) {
@@ -422,11 +501,12 @@
         }
 
         function disegnaFrecceDirezione(path) {
-            if (window.routeArrows && window.routeArrows.length > 0) {
-                window.routeArrows.forEach(arrow => arrow.setMap(null));
+            if (routeArrows && routeArrows.length > 0) {
+                routeArrows.forEach(arrow => arrow.setMap(null));
             }
-            window.routeArrows = [];
+            routeArrows = [];
 
+            // Aggiunge frecce direzionali lungo il percorso a intervalli regolari
             for (let i = 5; i < path.length - 5; i += 15) {
                 const current = path[i];
                 const next = path[i + 1];
@@ -437,16 +517,16 @@
                     map: map,
                     icon: {
                         path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-                        scale: 3.5,
+                        scale: 4,
                         fillColor: "#1a73e8",
                         fillOpacity: 1,
                         strokeColor: "#ffffff",
-                        strokeWeight: 1,
+                        strokeWeight: 1.5,
                         rotation: heading
                     },
                     clickable: false
                 });
-                window.routeArrows.push(arrowMarker);
+                routeArrows.push(arrowMarker);
             }
         }
 
@@ -476,7 +556,7 @@
             userHasRotatedSV = false;
             const pos = panorama.getPosition();
             if (pos) {
-                allineaStreetViewAllaStrada(pos);
+                allineaSenseViewAllaStrada(pos);
             }
         }
 
@@ -498,6 +578,7 @@
 
         function mostraPulsanteCalcola() {
             document.getElementById("submit-route").style.display = "block";
+            document.getElementById("route-info").style.display = "none";
             document.getElementById("post-calc-controls").style.display = "none";
         }
 
@@ -528,13 +609,13 @@
                     routePolyline = new google.maps.Polyline({
                         path: gpxPath,
                         geodesic: true,
-                        strokeColor: '#FF0000',
+                        strokeColor: '#1a73e8',
                         strokeOpacity: 0.8,
-                        strokeWeight: 4,
+                        strokeWeight: 5,
                         map: map
                     });
                     map.setCenter(gpxPath[0]);
-                    alert("Traccia GPX importata e visualizzata con successo!");
+                    alert("Traccia GPX importata con successo!");
                 } else {
                     alert("Nessun punto valido trovato nel file GPX.");
                 }
@@ -543,19 +624,15 @@
         }
 
         function importaMyMaps() {
-            const url = prompt("Incolla il link o coordinate di condivisione My Maps:");
+            const url = prompt("Incolla il link o l'ID della mappa My Maps:");
             if(url) {
-                alert("Collegamento My Maps acquisito. Tracciato sincronizzato correttamente.");
+                alert("Collegamento My Maps acquisito correttamente.");
             }
         }
 
         function handleCredentialResponse(response) {
             const payload = JSON.parse(atob(response.credential.split('.')[1]));
-            
-            // Nasconde il pulsante di accesso originale di Google
             document.getElementById("buttonDiv").style.display = "none";
-            
-            // Mostra il pannello utente loggato con nome e tasto di Logout
             const userInfo = document.getElementById("user-info");
             userInfo.style.display = "flex";
             userInfo.innerHTML = `<span>👤 <b>${payload.name}</b></span> <button class="logout-btn" onclick="eseguiLogout()">Esci</button>`;
@@ -563,8 +640,6 @@
 
         function eseguiLogout() {
             google.accounts.id.disableAutoSelect();
-            
-            // Nasconde le info utente e ripristina il pulsante Google
             document.getElementById("user-info").style.display = "none";
             renderGoogleButton();
         }
