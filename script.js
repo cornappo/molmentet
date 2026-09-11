@@ -7,7 +7,6 @@ let allowFreeMovement = false;
 let isUpdatingFromMap = false;
 let longPressTimer = null;
 
-// Variabili per la riproduzione automatica passo-passo e trascinamento pallino
 let playInterval = null;
 let currentPathIndex = 0;
 let isPlaying = false;
@@ -17,7 +16,6 @@ function log(msg) {
     console.log(`[LOG] ${msg}`);
 }
 
-// Funzione per aprire/chiudere il pannello laterale (stile Google Maps)
 function toggleSidebar() {
     const sidebar = document.getElementById("sidebar");
     const toggleBtn = document.getElementById("sidebar-toggle");
@@ -33,18 +31,69 @@ function toggleSidebar() {
     }
 }
 
-// Recupera la chiave in sicurezza dal server ed inizializza Google Maps
-fetch('/api/config')
-    .then(res => res.json())
-    .then(data => {
-        const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${data.apiKey}&libraries=places,geometry`;
-        script.async = true;
-        script.defer = true;
-        script.onload = initMap;
-        document.head.appendChild(script);
-    })
-    .catch(err => console.error("Errore caricamento configurazione:", err));
+// Inizializzazione Google Identity Services (Login) al caricamento della pagina
+window.onload = function () {
+    if (typeof google !== 'undefined' && google.accounts) {
+        google.accounts.id.initialize({
+            client_id: "316037590804-ro5uvmlkhd5im3d610odd9vrkuu004ml.apps.googleusercontent.com",
+            callback: handleCredentialResponse
+        });
+        renderGoogleButton();
+    }
+};
+
+function renderGoogleButton() {
+    const buttonDiv = document.getElementById("google-login-btn-container");
+    if (buttonDiv) {
+        buttonDiv.style.display = "block";
+        google.accounts.id.renderButton(buttonDiv, { theme: "outline", size: "large", width: "100%" });
+    }
+}
+
+function handleCredentialResponse(response) {
+    try {
+        const payload = JSON.parse(atob(response.credential.split('.')[1]));
+        log(`Utente autenticato con successo: ${payload.name} (${payload.email})`);
+
+        // Sblocca l'interfaccia nascondendo il login e mostrando l'app
+        document.getElementById("login-screen").style.display = "none";
+        document.getElementById("app-container").style.display = "block";
+
+        const userInfo = document.getElementById("user-info");
+        userInfo.style.display = "flex";
+        userInfo.innerHTML = `<span>👤 <b>${payload.name}</b></span> <button class="logout-btn" onclick="eseguiLogout()" style="background:#d93025; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Esci</button>`;
+
+        // Avvia il caricamento di Google Maps solo dopo il login autorizzato
+        inizializzaConfigurazioneMaps();
+    } catch (e) {
+        console.error("Errore decodifica token", e);
+        document.getElementById("login-error").innerText = "Errore durante l'autenticazione.";
+    }
+}
+
+function eseguiLogout() {
+    google.accounts.id.disableAutoSelect();
+    document.getElementById("app-container").style.display = "none";
+    document.getElementById("login-screen").style.display = "flex";
+    document.getElementById("login-error").innerText = "";
+    renderGoogleButton();
+    log("Disconnessione effettuata.");
+}
+
+function inizializzaConfigurazioneMaps() {
+    if (map) return;
+    fetch('/api/config')
+        .then(res => res.json())
+        .then(data => {
+            const script = document.createElement('script');
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${data.apiKey}&libraries=places,geometry`;
+            script.async = true;
+            script.defer = true;
+            script.onload = initMap;
+            document.head.appendChild(script);
+        })
+        .catch(err => console.error("Errore caricamento configurazione:", err));
+}
 
 function initMap() {
     const udine = { lat: 46.0611, lng: 13.2381 };
@@ -78,7 +127,6 @@ function initMap() {
 
     infoWindowHover = new google.maps.InfoWindow();
 
-    // Gestione interazioni mappa
     map.addListener("mousedown", (event) => avviaTimerAnteprima(event.latLng));
     map.addListener("touchstart", (event) => {
         if (event.latLng) avviaTimerAnteprima(event.latLng);
@@ -100,7 +148,6 @@ function initMap() {
                     panorama.setPosition(data.location.latLng);
                     isUpdatingFromMap = false;
                     aggiornaIndicePercorsoPiuVicino(data.location.latLng);
-                    log(`Mappa trascinata: Street View aggiornato a ${data.location.latLng.lat().toFixed(4)}, ${data.location.latLng.lng().toFixed(4)}`);
                 }
             });
         }
@@ -109,7 +156,6 @@ function initMap() {
     map.addListener("click", (event) => {
         cancellaTimerAnteprima();
         chiudiAnteprima();
-        log(`Click su mappa: ${event.latLng.lat().toFixed(4)}, ${event.latLng.lng().toFixed(4)}`);
         aggiungiTappaDaClick(event.latLng);
     });
 
@@ -117,7 +163,6 @@ function initMap() {
         cancellaTimerAnteprima();
         chiudiAnteprima();
         fermaRiproduzione();
-        log(`Doppio click su mappa: posizionamento libero attivato.`);
         allowFreeMovement = true;
         const svService = new google.maps.StreetViewService();
         svService.getPanorama({ location: event.latLng, radius: 100 }, (data, status) => {
@@ -134,16 +179,14 @@ function initMap() {
         if (pos) {
             if (currentRoutePath.length > 0 && !allowFreeMovement) {
                 let closestPoint = trovaPuntoPiuVicinoSulPercorso(pos);
-                if (closestPoint) {
-                    pos = closestPoint;
-                }
+                if (closestPoint) pos = closestPoint;
             }
 
             if (!markerGiallo) {
                 markerGiallo = new google.maps.Marker({
                     position: pos,
                     map: map,
-                    draggable: true, // Permette di trascinare il pallino giallo direttamente lungo il percorso!
+                    draggable: true,
                     icon: {
                         path: google.maps.SymbolPath.CIRCLE,
                         scale: 13,
@@ -155,7 +198,6 @@ function initMap() {
                     title: "Trascina il pallino lungo il percorso"
                 });
 
-                // Gestione del trascinamento diretto del pallino giallo
                 markerGiallo.addListener("dragstart", () => {
                     isDraggingYellowMarker = true;
                     fermaRiproduzione();
@@ -166,8 +208,6 @@ function initMap() {
                         let closest = trovaPuntoPiuVicinoSulPercorso(event.latLng);
                         if (closest) {
                             markerGiallo.setPosition(closest);
-                            
-                            // AGGIORNAMENTO IN TEMPO REALE DURANTE IL DRAG
                             isUpdatingFromMap = true;
                             panorama.setPosition(closest);
                             isUpdatingFromMap = false;
@@ -187,14 +227,10 @@ function initMap() {
                         panorama.setPosition(target);
                         isUpdatingFromMap = false;
                         aggiornaIndicePercorsoPiuVicino(target);
-                        log(`Pallino giallo rilasciato sul percorso: aggiornato Street View.`);
                     }
                 });
-
             } else {
-                if (!isDraggingYellowMarker) {
-                    markerGiallo.setPosition(pos);
-                }
+                if (!isDraggingYellowMarker) markerGiallo.setPosition(pos);
                 markerGiallo.setMap(map);
             }
 
@@ -216,14 +252,6 @@ function initMap() {
     const destInput = document.getElementById("destination-input");
     if (originInput && !originInput.value) originInput.value = "Udine";
     if (destInput && !destInput.value) destInput.value = "Nimis";
-
-    if (typeof google !== 'undefined' && google.accounts) {
-        google.accounts.id.initialize({
-            client_id: "316037590804-ro5uvmlkhd5im3d610odd9vrkuu004ml.apps.googleusercontent.com",
-            callback: handleCredentialResponse
-        });
-        renderGoogleButton();
-    }
 
     calcolaPercorso();
     log("Mappa e servizi inizializzati con successo.");
@@ -322,8 +350,6 @@ function togglePlayRoute() {
             btn.innerText = "❚❚ Pausa";
             btn.style.background = "#d93025";
         }
-        log("Avvio riproduzione automatica lungo la rotonda/percorso.");
-        
         playInterval = setInterval(() => {
             if (currentPathIndex < currentRoutePath.length) {
                 isUpdatingFromMap = true;
@@ -336,7 +362,6 @@ function togglePlayRoute() {
                     btn.innerText = "▶ Play Rotatoria";
                     btn.style.background = "#1a73e8";
                 }
-                log("Fine percorso raggiunta.");
             }
         }, 1000);
     }
@@ -366,7 +391,6 @@ function stepRouteForward(steps) {
         isUpdatingFromMap = true;
         panorama.setPosition(currentRoutePath[currentPathIndex]);
         isUpdatingFromMap = false;
-        log(`Spostamento manuale al punto ${currentPathIndex}/${currentRoutePath.length}`);
     }
 }
 
@@ -374,16 +398,7 @@ function setTravelMode(mode, btnElement) {
     document.getElementById("travel-mode").value = mode;
     document.querySelectorAll(".travel-mode-btn").forEach(b => b.classList.remove("active"));
     btnElement.classList.add("active");
-    log(`Modalità di viaggio impostata su: ${mode}`);
     calcolaPercorso();
-}
-
-function renderGoogleButton() {
-    const buttonDiv = document.getElementById("buttonDiv");
-    if (buttonDiv) {
-        buttonDiv.style.display = "block";
-        google.accounts.id.renderButton(buttonDiv, { theme: "outline", size: "small", width: "100%" });
-    }
 }
 
 function setupAutocomplete(inputId, checkId) {
@@ -398,7 +413,6 @@ function setupAutocomplete(inputId, checkId) {
             input.style.borderColor = "#137333";
             input.style.backgroundColor = "#e6f4ea";
             if (check) check.style.display = "block";
-            log(`Luogo selezionato (${inputId}): ${input.value}`);
             aggiungiMarkerVerde(place.geometry.location, input.value);
             calcolaPercorso();
         } else {
@@ -436,7 +450,6 @@ function aggiungiMarkerVerde(location, title) {
         geocoder.geocode({ location: event.latLng }, (results, status) => {
             if (status === "OK" && results[0]) {
                 marker.setTitle(results[0].formatted_address);
-                log(`Marker trascinato a: ${results[0].formatted_address}`);
                 calcolaPercorso();
             }
         });
@@ -451,10 +464,10 @@ function aggiungiTappaIntermedia(valore = "") {
     div.className = "tappa-row";
     const uniqueId = "tappa-" + Date.now();
     div.innerHTML = `
-        <div class="input-container" style="width:100%;">
+        <div class="input-container" style="width:100%; display:flex; align-items:center; margin-bottom:6px;">
             <span class="input-icon">📍</span>
-            <input type="text" class="tappa-input" id="${uniqueId}" value="${valore}" placeholder="Aggiungi tappa">
-            <span class="status-check" id="check-${uniqueId}">✓</span>
+            <input type="text" class="tappa-input" id="${uniqueId}" value="${valore}" placeholder="Aggiungi tappa" style="flex:1; padding:6px;">
+            <span class="status-check" id="check-${uniqueId}" style="display:none;">✓</span>
         </div>
         <button class="btn-remove-tappa" onclick="this.parentElement.remove(); calcolaPercorso();" title="Rimuovi">×</button>`;
     container.appendChild(div);
@@ -463,7 +476,6 @@ function aggiungiTappaIntermedia(valore = "") {
         document.getElementById(`check-${uniqueId}`).style.display = "block";
     }
     setupAutocomplete(uniqueId, `check-${uniqueId}`);
-    log("Tappa intermedia aggiunta.");
 }
 
 function aggiungiTappaDaClick(latLng) {
@@ -485,13 +497,9 @@ function calcolaPercorso() {
     const origin = document.getElementById("origin-input").value.trim();
     const destination = document.getElementById("destination-input").value.trim();
 
-    if (!origin || !destination) {
-        log("Campi di partenza o arrivo vuoti: calcolo percorso saltato.");
-        return;
-    }
+    if (!origin || !destination) return;
 
     const mode = document.getElementById("travel-mode").value;
-
     const tappaInputs = document.querySelectorAll(".tappa-input");
     let waypoints = [];
     tappaInputs.forEach(input => {
@@ -508,10 +516,9 @@ function calcolaPercorso() {
         provideRouteAlternatives: false
     };
 
-    log(`Calcolo percorso in corso da "${origin}" a "${destination}"...`);
-
     directionsService.route(request, (result, status) => {
         if (status == "OK") {
+            directionsRenderer.setMap(map);
             directionsRenderer.setDirections(result);
             currentRoutePath = result.routes[0].overview_path;
             disegnaFrecceDirezione(currentRoutePath);
@@ -529,9 +536,7 @@ function calcolaPercorso() {
             document.getElementById("submit-route").style.display = "none";
             document.getElementById("route-info").style.display = "block";
             document.getElementById("post-calc-controls").style.display = "flex";
-            log(`Percorso calcolato con successo: ${km} km. Punti totali traccia: ${currentRoutePath.length}`);
         } else {
-            log(`ERRORE calcolo percorso: ${status}`);
             currentRoutePath = [];
         }
     });
@@ -601,7 +606,6 @@ function invertiPercorso() {
         input.value = valoriTappe[index];
     });
 
-    log("Inversione percorso effettuata.");
     calcolaPercorso();
 }
 
@@ -633,27 +637,26 @@ function importaGPX(event) {
             document.getElementById("destination-input").value = `${trkpts[trkpts.length-1].getAttribute("lat")}, ${trkpts[trkpts.length-1].getAttribute("lon")}`;
             
             currentRoutePath = gpxPath;
+            if (directionsRenderer) directionsRenderer.setMap(null);
+
             disegnaFrecceDirezione(gpxPath);
             map.setCenter(gpxPath[0]);
-            log("File GPX importato correttamente.");
-            alert("Traccia GPX importata con successo!");
+            
+            let distGPX = 0;
+            for(let i=0; i<gpxPath.length-1; i++) {
+                distGPX += google.maps.geometry.spherical.computeDistanceBetween(gpxPath[i], gpxPath[i+1]);
+            }
+            const km = (distGPX / 1000).toFixed(1);
+            document.getElementById("info-distanza").innerText = km + " km (GPX)";
+            document.getElementById("route-info").style.display = "block";
+            document.getElementById("post-calc-controls").style.display = "flex";
+
+            alert("Traccia GPX importata con successo e impostata come percorso da seguire!");
         }
     };
     reader.readAsText(file);
 }
 
-function handleCredentialResponse(response) {
-    const payload = JSON.parse(atob(response.credential.split('.')[1]));
-    document.getElementById("buttonDiv").style.display = "none";
-    const userInfo = document.getElementById("user-info");
-    userInfo.style.display = "flex";
-    userInfo.innerHTML = `👤 <b>${payload.name}</b> <button class="logout-btn" onclick="eseguiLogout()">Esci</button>`;
-    log(`Utente autenticato: ${payload.name}`);
-}
-
-function eseguiLogout() {
-    google.accounts.id.disableAutoSelect();
-    document.getElementById("user-info").style.display = "none";
-    renderGoogleButton();
-    log("Disconnessione effettuata.");
+function apriMyMaps() {
+    window.open("https://www.google.com/maps/about/mymaps/", "_blank");
 }
