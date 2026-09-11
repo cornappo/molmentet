@@ -2,472 +2,162 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Google Maps & StreetView Advanced Sync</title>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <title>Mappa e Percorso con Street View</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body, html { width: 100%; height: 100%; overflow: hidden; font-family: Roboto, Arial, sans-serif; }
-        
-        #app-container {
-            display: flex;
-            flex-direction: column;
-            width: 100vw;
-            height: 100vh;
-        }
-        
-        #map { width: 100%; height: 50%; }
-        #street-view { width: 100%; height: 50%; }
-
-        @media (min-width: 768px) {
-            #app-container { flex-direction: row; }
-            #map { width: 50%; height: 100%; }
-            #street-view { width: 50%; height: 100%; }
-        }
-
-        #panel {
-            position: absolute;
-            top: 12px;
-            left: 12px;
-            z-index: 5;
-            background: white;
-            padding: 16px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2), 0 -1px 0px rgba(0,0,0,0.02);
-            font-size: 14px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            max-width: 400px;
-            width: calc(100% - 24px);
-            max-height: calc(100vh - 24px);
-            overflow-y: auto;
-        }
-
-        .travel-modes {
-            display: flex;
-            justify-content: space-around;
-            border-bottom: 1px solid #e8eaed;
-            padding-bottom: 8px;
-            margin-bottom: 4px;
-        }
-
-        .travel-mode-btn {
-            background: none;
-            border: none;
-            font-size: 18px;
-            cursor: pointer;
-            padding: 6px 12px;
-            border-radius: 50%;
-            transition: background 0.2s;
-        }
-
-        .travel-mode-btn:hover { background: #f1f3f4; }
-        .travel-mode-btn.active { background: #e8f0fe; }
-
-        .route-inputs-wrapper {
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .route-inputs-wrapper::before {
-            content: '';
-            position: absolute;
-            left: 19px;
-            top: 22px;
-            bottom: 22px;
-            width: 2px;
-            background: #bdc1c6;
-            z-index: 1;
-        }
-
-        .input-container {
-            position: relative;
-            display: flex;
-            align-items: center;
-            z-index: 2;
-        }
-
-        .input-icon {
-            position: absolute;
-            left: 12px;
-            font-size: 16px;
-            z-index: 3;
-        }
-
-        #panel input {
-            width: 100%;
-            padding: 10px 36px 10px 38px;
-            border: 1px solid #dadce0;
-            border-radius: 8px;
-            font-size: 14px;
-            background: #f8f9fa;
-            color: #3c4043;
-            outline: none;
-            transition: all 0.2s;
-        }
-
-        #panel input:focus {
-            background: #fff;
-            border-color: #1a73e8;
-            box-shadow: 0 1px 3px rgba(26,115,232,0.2);
-        }
-
-        .status-check {
-            position: absolute;
-            right: 12px;
-            color: #137333;
-            font-weight: bold;
-            font-size: 14px;
-            display: none;
-            z-index: 3;
-        }
-
-        .tappa-row {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-            position: relative;
-        }
-
-        .btn-remove-tappa {
-            background: #f1f3f4;
-            color: #5f6368;
-            border: none;
-            width: 36px;
-            height: 38px;
-            border-radius: 8px;
-            font-weight: bold;
-            cursor: pointer;
-            font-size: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            transition: background 0.2s;
-            z-index: 2;
-        }
-        .btn-remove-tappa:hover { background: #dadce0; color: #202124; }
-
-        .add-between-container {
-            display: flex;
-            justify-content: flex-start;
-            padding-left: 12px;
-            margin: -4px 0;
-            z-index: 2;
-        }
-
-        .btn-add-between {
-            background: #fff;
-            color: #1a73e8;
-            border: 1px solid #dadce0;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            font-weight: bold;
-            cursor: pointer;
-            font-size: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-            transition: transform 0.1s;
-        }
-        .btn-add-between:hover { transform: scale(1.1); background: #f8f9fa; }
-
-        #panel button.action-btn {
-            background: #1a73e8;
-            color: white;
-            border: none;
-            padding: 10px;
-            border-radius: 8px;
-            font-weight: 500;
-            cursor: pointer;
-            font-size: 14px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-            transition: background 0.2s;
-        }
-        #panel button.action-btn:hover { background: #1557b0; }
-
-        .secondary-controls {
-            display: flex;
-            gap: 8px;
-        }
-
-        .secondary-controls button {
-            flex: 1;
-            padding: 8px;
-            background: #fff;
-            border: 1px solid #dadce0;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 12px;
-            font-weight: 500;
-            color: #3c4043;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-            transition: background 0.2s;
-        }
-        .secondary-controls button:hover { background: #f8f9fa; }
-
-        #route-info {
-            background: #e8f0fe;
-            padding: 10px;
-            border-radius: 8px;
-            border-left: 4px solid #1a73e8;
-            font-size: 13px;
-            color: #174ea6;
-            display: none;
-        }
-
-        #system-log {
-            background: #1e1e1e;
-            color: #00ff66;
-            font-family: monospace;
-            font-size: 11px;
-            padding: 8px;
-            border-radius: 6px;
-            max-height: 90px;
-            overflow-y: auto;
-            border: 1px solid #333;
-        }
-
-        #user-info {
-            font-size: 13px;
-            color: #3c4043;
-            border-top: 1px solid #e8eaed;
-            padding-top: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logout-btn {
-            background: #f1f3f4;
-            color: #d93025;
-            border: 1px solid #dadce0;
-            padding: 4px 10px;
-            border-radius: 6px;
-            font-size: 11px;
-            font-weight: 500;
-            cursor: pointer;
-        }
-        .logout-btn:hover { background: #fce8e6; }
-
-        /* Custom Infowindow styling per anteprima StreetView */
-        .gm-style-iw { padding: 5px !important; }
-        .sv-preview-box { text-align: center; font-size: 12px; }
-        .sv-preview-box img { width: 180px; height: 110px; border-radius: 4px; object-fit: cover; margin-top: 4px; }
-
-        .pac-container {
-            border-radius: 0 0 8px 8px;
-            margin-top: -2px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            border: 1px solid #dadce0;
-            border-top: none;
-            font-family: Roboto, Arial, sans-serif;
-            z-index: 999999;
-        }
-        .pac-item { padding: 10px 12px; font-size: 13px; cursor: pointer; border-top: 1px solid #f1f3f4; }
-        .pac-item:hover { background-color: #f8f9fa; }
-        .pac-matched { font-weight: 500; color: #1a73e8; }
-        .pac-icon { display: none; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f8f9fa; }
+        #map { width: 100%; height: 400px; margin-bottom: 20px; }
+        .controls { background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .input-container { display: flex; align-items: center; margin-bottom: 10px; position: relative; }
+        .input-icon { margin-right: 8px; }
+        input[type="text"] { width: 100%; padding: 8px; border: 1px solid #dadce0; border-radius: 4px; box-sizing: border-box; }
+        .status-check { display: none; position: absolute; right: 10px; color: #137333; font-weight: bold; }
+        .travel-mode-btn { padding: 8px 12px; margin-right: 5px; border: 1px solid #dadce0; background: #fff; cursor: pointer; border-radius: 4px; }
+        .travel-mode-btn.active { background: #e8f0fe; border-color: #1a73e8; color: #1a73e8; }
+        .tappa-row { display: flex; align-items: center; margin-bottom: 10px; }
+        .btn-remove-tappa { background: none; border: none; color: #d93025; font-size: 18px; cursor: pointer; margin-left: 8px; }
+        #user-info { display: none; align-items: center; gap: 10px; margin-top: 15px; }
+        .logout-btn { background: #d93025; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <div id="app-container">
-        <div id="map"></div>
-        <div id="street-view"></div>
-    </div>
-
-    <div id="panel">
-        <div class="travel-modes">
-            <button class="travel-mode-btn active" onclick="setTravelMode('DRIVING', this)" title="In auto">🚗</button>
-            <button class="travel-mode-btn" onclick="setTravelMode('TRANSIT', this)" title="Con i mezzi pubblici">🚆</button>
-            <button class="travel-mode-btn" onclick="setTravelMode('WALKING', this)" title="A piedi">🚶‍♂️</button>
-            <button class="travel-mode-btn" onclick="setTravelMode('BICYCLING', this)" title="In bicicletta">🚴‍♂️</button>
+    <div class="controls">
+        <h3>Pianificatore Percorso</h3>
+        <div id="travel-modes">
+            <button class="travel-mode-btn active" onclick="setTravelMode('DRIVING', this)">Auto</button>
+            <button class="travel-mode-btn id="mode-walking" onclick="setTravelMode('WALKING', this)">A piedi</button>
         </div>
         <input type="hidden" id="travel-mode" value="DRIVING">
-
-        <div class="route-inputs-wrapper">
-            <div class="input-container">
-                <span class="input-icon">🔵</span>
-                <input type="text" id="origin-input" value="Udine, IT" placeholder="Punto di partenza">
-                <span id="check-origin" class="status-check">✓</span>
-            </div>
-            
-            <div class="add-between-container">
-                <button class="btn-add-between" onclick="aggiungiTappaIntermedia()" title="Aggiungi tappa">+</button>
-            </div>
-
-            <div id="tappe-container" style="display:flex; flex-direction:column; gap:8px;"></div>
-
-            <div class="input-container">
-                <span class="input-icon">🔴</span>
-                <input type="text" id="destination-input" value="Nimis, IT" placeholder="Destinazione">
-                <span id="check-dest" class="status-check">✓</span>
-            </div>
+        
+        <br>
+        <div class="input-container">
+            <span class="input-icon">🟢</span>
+            <input type="text" id="origin-input" placeholder="Punto di partenza">
+            <span class="status-check" id="check-origin">✓</span>
         </div>
 
-        <div class="secondary-controls">
-            <button onclick="document.getElementById('gpx-file').click()">📂 Importa GPX</button>
-            <input type="file" id="gpx-file" style="display:none" accept=".gpx" onchange="importaGPX(event)">
-            <button onclick="importaMyMaps()">🗺️ My Maps</button>
+        <div id="tappe-container"></div>
+        <button onclick="aggiungiTappaIntermedia()">+ Aggiungi tappa</button>
+        <br><br>
+
+        <div class="input-container">
+            <span class="input-icon">🔴</span>
+            <input type="text" id="destination-input" placeholder="Destinazione">
+            <span class="status-check" id="check-dest">✓</span>
         </div>
 
-        <button id="submit-route" class="action-btn" onclick="calcolaPercorso()">Calcola Percorso</button>
-
-        <div id="route-info">
-            <b>Dati Percorso:</b> <span id="info-distanza"></span> | <span id="info-dislivello"></span>
+        <button id="submit-route" onclick="calcolaPercorso()">Calcola Percorso</button>
+        
+        <div id="route-info" style="display:none; margin-top: 10px;">
+            <b>Distanza:</b> <span id="info-distanza">0 km</span><br>
+            <span id="info-dislivello">Dislivello: ~0m</span>
         </div>
 
-        <div class="secondary-controls" id="post-calc-controls" style="display:none;">
-            <button onclick="invertiPercorso()">🔄 Inverti</button>
-            <button onclick="resetHeadingSV()">🎯 Reset Vista</button>
-            <button onclick="mostraPulsanteCalcola()">✏️ Modifica</button>
+        <div id="post-calc-controls" style="display:none; margin-top: 10px; gap: 10px;">
+            <button onclick="invertiPercorso()">Inverti Percorso</button>
+            <button onclick="mostraPulsanteCalcola()">Modifica</button>
         </div>
 
-        <div id="system-log">[INIT] Applicazione avviata correttamente. Pronto.</div>
+        <div style="margin-top: 15px;">
+            <label>Importa GPX: <input type="file" id="gpx-file" accept=".gpx" onchange="importaGPX(event)"></label>
+        </div>
 
-        <div id="buttonDiv" style="margin-top: 4px;"></div>
-        <div id="user-info" style="display:none;"></div>
+        <div id="buttonDiv" style="margin-top: 15px;"></div>
+        <div id="user-info"></div>
     </div>
 
-    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDG_mSkkyeEt949GgRbnTWcLBwnm2OcRzI&libraries=geometry&callback=initMap"></script>
+    <br>
+    <div id="map"></div>
+    <div id="pano" style="width: 100%; height: 300px; margin-top: 10px;"></div>
 
+    <!-- Script di caricamento dinamico della chiave tramite API protetta del server -->
     <script>
         let map, panorama, directionsService, directionsRenderer;
-        let markerGiallo = null;
-        let markerHover = null;
-        let infoWindowHover = null;
+        let markerHover, infoWindowHover, markerGiallo;
         let markersVerdi = [];
-        let routePolyline = null;
-        let userHasRotatedSV = false;
-        let currentRoutePath = [];
         let routeArrows = [];
-        let isUpdatingFromMap = false;
+        let currentRoutePath = [];
         let allowFreeMovement = false;
+        let isUpdatingFromMap = false;
+        let userHasRotatedSV = false;
 
         function log(msg) {
-            const logBox = document.getElementById("system-log");
-            const time = new Date().toLocaleTimeString();
-            logBox.innerHTML += `<br>[${time}] ${msg}`;
-            logBox.scrollTop = logBox.scrollHeight;
+            console.log(`[LOG] ${msg}`);
         }
 
+        // Recupera la chiave in sicurezza dal server ed inizializza Google Maps
+        fetch('/api/config')
+            .then(res => res.json())
+            .then(data => {
+                const script = document.createElement('script');
+                script.src = `https://maps.googleapis.com/maps/api/js?key=${data.apiKey}&libraries=places,geometry`;
+                script.async = true;
+                script.defer = true;
+                script.onload = initMap;
+                document.head.appendChild(script);
+            })
+            .catch(err => console.error("Errore caricamento configurazione:", err));
+
         function initMap() {
-            const udine = { lat: 46.061, lng: 13.234 };
+            const udine = { lat: 46.0611, lng: 13.2381 };
             map = new google.maps.Map(document.getElementById("map"), {
                 center: udine,
-                zoom: 14,
-                streetViewControl: false,
-                mapTypeControl: false,
-                fullscreenControl: false,
-                zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_BOTTOM }
+                zoom: 13,
+                streetViewControl: false
             });
 
-            panorama = new google.maps.StreetViewPanorama(
-                document.getElementById("street-view"), {
-                    position: udine,
-                    pov: { heading: 34, pitch: 10 },
-                    enableCloseButton: false,
-                    zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_BOTTOM }
-                }
-            );
+            panorama = new google.maps.StreetViewPanorama(document.getElementById("pano"), {
+                position: udine,
+                pov: { heading: 34, pitch: 10 }
+            });
+
             map.setStreetView(panorama);
 
             directionsService = new google.maps.DirectionsService();
-            directionsRenderer = new google.maps.DirectionsRenderer({
-                map: map,
-                preserveViewport: false,
-                suppressMarkers: true 
-            });
+            directionsRenderer = new google.maps.DirectionsRenderer({ map: map, suppressMarkers: true });
 
-            infoWindowHover = new google.maps.InfoWindow();
-
-            // Marker per l'anteprima al passaggio del mouse (rossiccio/arancione scuro)
             markerHover = new google.maps.Marker({
                 map: null,
                 icon: {
                     path: google.maps.SymbolPath.CIRCLE,
-                    scale: 8,
-                    fillColor: "#d93025",
-                    fillOpacity: 0.9,
+                    scale: 5,
+                    fillColor: "#ea4335",
+                    fillOpacity: 1,
                     strokeColor: "#ffffff",
-                    strokeWeight: 2
-                },
-                zIndex: 1000
+                    strokeWeight: 1.5
+                }
             });
 
-            // Gestione del passaggio del mouse (mousemove sulla mappa)
-            map.getDiv().addEventListener("mousemove", (e) => {
-                const projection = map.getProjection();
-                if (!projection) return;
-                
-                // Ricava le coordinate geografiche dal pixel del mouse
-                const bounds = map.getBounds();
-                if (!bounds) return;
-                
-                const mapDiv = map.getDiv();
-                const rect = mapDiv.getBoundingClientRect();
-                const mouseX = e.clientX - rect.left;
-                const mouseY = e.clientY - rect.top;
+            infoWindowHover = new google.maps.InfoWindow();
 
-                if (mouseX < 0 || mouseX > rect.width || mouseY < 0 || mouseY > rect.height) {
-                    markerHover.setMap(null);
-                    infoWindowHover.close();
-                    return;
-                }
-
-                // Conversione approssimativa pixel -> LatLng tramite overlay view o proiezioni
-                const topRight = projection.fromLatLngToPoint(bounds.getNorthEast());
-                const bottomLeft = projection.fromLatLngToPoint(bounds.getSouthWest());
-                const scale = Math.pow(2, map.getZoom());
-                
-                const worldPoint = new google.maps.Point(
-                    bottomLeft.x + mouseX / scale,
-                    topRight.y + mouseY / scale
-                );
-                const mouseLatLng = projection.fromPointToLatLng(worldPoint);
-
-                // Trova il punto più vicino sul percorso corrente o usa la posizione del mouse se non c'è percorso
-                let targetPos = mouseLatLng;
-                if (currentRoutePath.length > 0) {
-                    targetPos = trovaPuntoPiuVicinoSulPercorso(mouseLatLng);
-                }
-
+            map.addListener("mousemove", (event) => {
+                const targetPos = event.latLng;
                 markerHover.setPosition(targetPos);
                 if (!markerHover.getMap()) markerHover.setMap(map);
 
-                // Genera anteprima Street View tramite Static Street View Image API (senza rallentare con richieste di servizio pesanti)
-                const streetViewImgUrl = `https://maps.googleapis.com/maps/api/streetview?size=180x110&location=${targetPos.lat()},${targetPos.lng()}&fov=90&heading=235&pitch=10&key=AIzaSyDG_mSkkyeEt949GgRbnTWcLBwnm2OcRzI`;
-                
-                const contentString = `
-                    <div class="sv-preview-box">
-                        <b>Anteprima Street View</b><br>
-                        <img src="${streetViewImgUrl}" alt="Street View Preview" onerror="this.style.display='none'">
-                    </div>
-                `;
-                
-                infoWindowHover.setContent(contentString);
-                infoWindowHover.open(map, markerHover);
+                fetch('/api/config').then(res => res.json()).then(data => {
+                    const streetViewImgUrl = `https://maps.googleapis.com/maps/api/streetview?size=180x110&location=${targetPos.lat()},${targetPos.lng()}&fov=90&heading=235&pitch=10&key=${data.apiKey}`;
+                    const contentString = `
+                        <div class="sv-preview-box">
+                            <b>Anteprima Street View</b><br>
+                            <img src="${streetViewImgUrl}" alt="Street View Preview" onerror="this.style.display='none'">
+                        </div>
+                    `;
+                    infoWindowHover.setContent(contentString);
+                    infoWindowHover.open(map, markerHover);
+                });
             });
 
-            // Nascondi il pallino hover quando il mouse esce dalla mappa
             map.getDiv().addEventListener("mouseleave", () => {
                 markerHover.setMap(null);
                 infoWindowHover.close();
             });
 
-            // Click singolo: Aggiunge la tappa intermedia
             map.addListener("click", (event) => {
                 log(`Click su mappa: ${event.latLng.lat().toFixed(4)}, ${event.latLng.lng().toFixed(4)}`);
                 aggiungiTappaDaClick(event.latLng);
             });
 
-            // Doppio click: Sblocca temporaneamente il pallino giallo e lo Street View esattamente dove si clicca
             map.addListener("dblclick", (event) => {
                 log(`Doppio click su mappa: posizionamento libero attivato.`);
                 allowFreeMovement = true;
@@ -481,10 +171,8 @@
                 });
             });
 
-            // Trascina mappa (dragend): La mappa NON si sposta, ma il pallino giallo si ricalibra 
-            // trovando il punto del percorso più vicino al CENTRO esatto dello schermo corrente.
             map.addListener("dragend", () => {
-                allowFreeMovement = false; 
+                allowFreeMovement = false;
                 const screenCenter = map.getCenter();
                 
                 if (currentRoutePath.length > 0) {
@@ -512,9 +200,7 @@
                 if (pos) {
                     if (currentRoutePath.length > 0 && !allowFreeMovement) {
                         let closestPoint = trovaPuntoPiuVicinoSulPercorso(pos);
-                        if (closestPoint) {
-                            pos = closestPoint;
-                        }
+                        if (closestPoint) pos = closestPoint;
                     }
 
                     if (!markerGiallo) {
@@ -535,7 +221,6 @@
                         markerGiallo.setPosition(pos);
                     }
 
-                    // Centra la mappa solo se non è un'azione di trascinamento libero dell'utente
                     if (!isUpdatingFromMap && !allowFreeMovement) {
                         map.setCenter(pos);
                     }
@@ -553,11 +238,13 @@
             setupAutocomplete("origin-input", "check-origin");
             setupAutocomplete("destination-input", "check-dest");
 
-            google.accounts.id.initialize({
-                client_id: "316037590804-ro5uvmlkhd5im3d610odd9vrkuu004ml.apps.googleusercontent.com",
-                callback: handleCredentialResponse
-            });
-            renderGoogleButton();
+            if (typeof google !== 'undefined' && google.accounts) {
+                google.accounts.id.initialize({
+                    client_id: "316037590804-ro5uvmlkhd5im3d610odd9vrkuu004ml.apps.googleusercontent.com",
+                    callback: handleCredentialResponse
+                });
+                renderGoogleButton();
+            }
 
             calcolaPercorso();
             log("Mappa e servizi inizializzati con successo.");
@@ -785,13 +472,6 @@
             }
         }
 
-        function resetHeadingSV() {
-            userHasRotatedSV = false;
-            const pos = panorama.getPosition();
-            if (pos) allineaStreetViewAllaStrada(pos);
-            log("Vista Street View riallineata alla direzione stradale.");
-        }
-
         function invertiPercorso() {
             const originInput = document.getElementById("origin-input");
             const destInput = document.getElementById("destination-input");
@@ -838,32 +518,12 @@
                     
                     currentRoutePath = gpxPath;
                     disegnaFrecceDirezione(gpxPath);
-                    
-                    if (routePolyline) routePolyline.setMap(null);
-                    routePolyline = new google.maps.Polyline({
-                        path: gpxPath,
-                        geodesic: true,
-                        strokeColor: '#1a73e8',
-                        strokeOpacity: 0.8,
-                        strokeWeight: 5,
-                        map: map
-                    });
                     map.setCenter(gpxPath[0]);
                     log("File GPX importato correttamente.");
                     alert("Traccia GPX importata con successo!");
-                } else {
-                    log("Errore importazione GPX: nessun punto trovato.");
                 }
             };
             reader.readAsText(file);
-        }
-
-        function importaMyMaps() {
-            const url = prompt("Incolla il link o l'id della mappa My Maps:");
-            if(url) {
-                log("Collegamento My Maps acquisito.");
-                alert("Mappa collegata correttamente.");
-            }
         }
 
         function handleCredentialResponse(response) {
