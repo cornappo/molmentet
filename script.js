@@ -35,7 +35,7 @@ function toggleSidebar() {
 window.onload = function () {
     if (typeof google !== 'undefined' && google.accounts) {
         google.accounts.id.initialize({
-            client_id: "316037590804-ro5uvmlkhd5im3d610odd9vrkuu004ml.apps.googleusercontent.com",
+            client_id: "936267332054-ao5n6m8hotub832j6elepaju5j2b7qiq.apps.googleusercontent.com",
             callback: handleCredentialResponse
         });
         renderGoogleButton();
