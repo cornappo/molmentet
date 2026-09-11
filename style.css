@@ -1,0 +1,182 @@
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: Roboto, Arial, sans-serif;
+    display: flex;
+}
+
+/* Pannello Laterale Sinistro */
+.sidebar {
+    width: 400px;
+    min-width: 400px;
+    height: 100%;
+    background: #fff;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+    z-index: 10;
+    transition: transform 0.3s ease;
+    position: relative;
+    box-sizing: border-box;
+}
+
+.sidebar.collapsed {
+    transform: translateX(-100%);
+    min-width: 0;
+    width: 0;
+}
+
+.sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.sidebar-header h3 {
+    margin: 0;
+    font-size: 18px;
+    color: #202124;
+}
+
+.controls-content {
+    padding: 20px;
+    overflow-y: auto;
+    flex-grow: 1;
+    height: calc(100% - 60px);
+    box-sizing: border-box;
+}
+
+/* Pulsante hamburger per aprire/chiudere la sidebar */
+.sidebar-toggle-btn {
+    position: absolute;
+    top: 15px;
+    left: 415px;
+    z-index: 11;
+    background: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: left 0.3s ease;
+}
+
+.sidebar.collapsed ~ .sidebar-toggle-btn {
+    left: 15px;
+}
+
+/* Split Screen: Mappa e Street View divisi rigorosamente al 50% e forzati visibili */
+#split-container {
+    display: flex;
+    flex: 1;
+    height: 100vh;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+#map {
+    width: 50%;
+    height: 100%;
+    flex: 1;
+    position: relative;
+}
+
+#pano {
+    width: 50%;
+    height: 100%;
+    flex: 1;
+    position: relative;
+    border-left: 2px solid #fff;
+}
+
+/* Componenti form */
+.travel-modes-container {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 10px;
+}
+
+.travel-mode-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 8px 16px;
+    border-radius: 20px;
+    color: #5f6368;
+}
+
+.travel-mode-btn.active {
+    background: #e8f0fe;
+    color: #1a73e8;
+}
+
+.route-inputs-box {
+    background: #f8f9fa;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    border: 1px solid #dadce0;
+}
+
+.input-row-gmaps {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    background: #fff;
+    border: 1px solid #dadce0;
+    border-radius: 4px;
+    padding: 4px 8px;
+}
+
+.input-row-gmaps input {
+    width: 100%;
+    border: none;
+    outline: none;
+    padding: 8px;
+    font-size: 14px;
+}
+
+.point-icon {
+    font-size: 18px;
+    margin-right: 8px;
+}
+
+.origin-dot { color: #137333; }
+.dest-dot { color: #d93025; }
+
+.primary-btn {
+    width: 100%;
+    background: #1a73e8;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-bottom: 10px;
+}
+
+.secondary-btn, .text-btn {
+    background: #f1f3f4;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: #1a73e8;
+    font-weight: 500;
+}
+
+.text-btn { width: 100%; margin-bottom: 10px; text-align: left; }
+.icon-btn { background: none; border: none; cursor: pointer; border-radius: 50%; padding: 5px; }
