@@ -25,7 +25,6 @@
             #street-view { width: 50%; height: 100%; }
         }
 
-        /* Pannello laterale stile Google Maps Desktop */
         #panel {
             position: absolute;
             top: 12px;
@@ -45,7 +44,6 @@
             overflow-y: auto;
         }
 
-        /* Selettori modalità di viaggio */
         .travel-modes {
             display: flex;
             justify-content: space-around;
@@ -67,7 +65,6 @@
         .travel-mode-btn:hover { background: #f1f3f4; }
         .travel-mode-btn.active { background: #e8f0fe; }
 
-        /* Linea verticale e input itinerario */
         .route-inputs-wrapper {
             position: relative;
             display: flex;
@@ -224,7 +221,6 @@
             display: none;
         }
 
-        /* Sezione Log di Sistema */
         #system-log {
             background: #1e1e1e;
             color: #00ff66;
@@ -328,7 +324,6 @@
             <button onclick="mostraPulsanteCalcola()">✏️ Modifica</button>
         </div>
 
-        <!-- Log di Sistema integrato come richiesto -->
         <div id="system-log">[INIT] Applicazione avviata correttamente. Pronto.</div>
 
         <div id="buttonDiv" style="margin-top: 4px;"></div>
@@ -345,7 +340,7 @@
         let userHasRotatedSV = false;
         let currentRoutePath = [];
         let routeArrows = [];
-        let isUpdatingFromMap = false; // Flag per evitare loop di eventi
+        let isUpdatingFromMap = false;
 
         function log(msg) {
             const logBox = document.getElementById("system-log");
@@ -382,7 +377,6 @@
                 suppressMarkers: true 
             });
 
-            // Sincronizzazione Mappa -> Street View tramite click con controllo raggio panorama
             map.addListener("click", (event) => {
                 log(`Click su mappa: ${event.latLng.lat().toFixed(4)}, ${event.latLng.lng().toFixed(4)}`);
                 
@@ -406,7 +400,6 @@
                 aggiungiTappaDaClick(event.latLng);
             });
 
-            // Sincronizzazione Mappa -> Street View tramite trascinamento della mappa (dragend)
             map.addListener("dragend", () => {
                 const center = map.getCenter();
                 const svService = new google.maps.StreetViewService();
@@ -420,7 +413,6 @@
                 });
             });
 
-            // Gestione posizione Street View senza generare loop sulla mappa
             panorama.addListener("position_changed", () => {
                 const pos = panorama.getPosition();
                 if (pos) {
@@ -442,7 +434,6 @@
                         markerGiallo.setPosition(pos);
                     }
 
-                    // Centra la mappa solo se lo spostamento non è partito direttamente da un click mappa già gestito
                     if (!isUpdatingFromMap) {
                         map.setCenter(pos);
                     }
@@ -722,12 +713,12 @@
                     let gpxPath = [];
                     for (let i = 0; i < trkpts.length; i++) {
                         const lat = parseFloat(trkpts[i].getAttribute("lat"));
-                        const lon = parseFloat(trkpts[i].getAttribute("lon") || trkpts[i].getAttribute("lon"));
+                        const lon = parseFloat(trkpts[i].getAttribute("lon"));
                         gpxPath.push(new google.maps.LatLng(lat, lon));
                     }
                     
-                    document.getElementById("origin-input").value = `${trkpts[0].getAttribute("lat")}, ${trkpts[0].getAttribute("lon") || trkpts[0].getAttribute("lon")}`;
-                    document.getElementById("destination-input").value = `${trkpts[trkpts.length-1].getAttribute("lat")}, ${trkpts[trkpts.length-1].getAttribute("lon") || trkpts[trkpts.length-1].getAttribute("lon")}`;
+                    document.getElementById("origin-input").value = `${trkpts[0].getAttribute("lat")}, ${trkpts[0].getAttribute("lon")}`;
+                    document.getElementById("destination-input").value = `${trkpts[trkpts.length-1].getAttribute("lat")}, ${trkpts[trkpts.length-1].getAttribute("lon")}`;
                     
                     currentRoutePath = gpxPath;
                     disegnaFrecceDirezione(gpxPath);
