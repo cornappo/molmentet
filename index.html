@@ -381,9 +381,32 @@
                 suppressMarkers: true 
             });
 
+            // Sincronizzazione Mappa -> Street View tramite click
             map.addListener("click", (event) => {
                 log(`Click su mappa: ${event.latLng.lat().toFixed(4)}, ${event.latLng.lng().toFixed(4)}`);
+                
+                // Aggiorna la posizione dello Street View al punto cliccato
+                panorama.setPosition(event.latLng);
+                
+                // Se c'è un percorso attivo, allinea la vista alla direzione stradale
+                if (currentRoutePath.length > 0) {
+                    userHasRotatedSV = false;
+                    allineaStreetViewAllaStrada(event.latLng);
+                }
+
                 aggiungiTappaDaClick(event.latLng);
+            });
+
+            // Sincronizzazione Mappa -> Street View tramite trascinamento della mappa (dragend)
+            map.addListener("dragend", () => {
+                const center = map.getCenter();
+                const svService = new google.maps.StreetViewService();
+                svService.getPanorama({ location: center, radius: 50 }, (data, status) => {
+                    if (status === "OK") {
+                        panorama.setPosition(data.location.latLng);
+                        log(`Street View sincronizzato al centro mappa: ${data.location.latLng.lat().toFixed(4)}, ${data.location.latLng.lng().toFixed(4)}`);
+                    }
+                });
             });
 
             panorama.addListener("position_changed", () => {
@@ -725,7 +748,7 @@
             document.getElementById("buttonDiv").style.display = "none";
             const userInfo = document.getElementById("user-info");
             userInfo.style.display = "flex";
-            userInfo.innerHTML = `<span>👤 <b>${payload.name}</b></span> <button class="logout-btn" onclick="eseguiLogout()">Esci</button>`;
+            userInfo.innerHTML = `👤 <b>${payload.name}</b> <button class="logout-btn" onclick="eseguiLogout()">Esci</button>`;
             log(`Utente autenticato: ${payload.name}`);
         }
 
