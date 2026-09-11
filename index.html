@@ -9,12 +9,7 @@
 </head>
 <body>
 
-    <!-- Pulsante per aprire il pannello se collassato -->
-    <button id="sidebar-toggle" class="sidebar-toggle-btn" onclick="toggleSidebar()" title="Apri riquadro">
-        <span class="material-icons">menu</span>
-    </button>
-
-    <!-- Pannello Laterale Sinistro (Stile Google Maps Directions) -->
+    <!-- Pannello Laterale Sinistro con Linguetta integrata -->
     <div id="sidebar" class="sidebar">
         <div class="sidebar-header">
             <h3>Indicazioni stradali</h3>
@@ -67,6 +62,11 @@
             <div id="buttonDiv" class="google-auth-box"></div>
             <div id="user-info"></div>
         </div>
+
+        <!-- Linguetta laterale per aprire/chiudere il pannello -->
+        <button id="sidebar-toggle" class="sidebar-toggle-btn" onclick="toggleSidebar()" title="Apri riquadro">
+            <span class="material-icons" id="toggle-icon-symbol">chevron_left</span>
+        </button>
     </div>
 
     <!-- Contenitore Principale Diviso a Metà (Mappa + Street View) -->
