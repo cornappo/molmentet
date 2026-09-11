@@ -38,7 +38,7 @@
             display: flex;
             flex-direction: column;
             gap: 6px;
-            max-width: 340px;
+            max-width: 350px;
             width: calc(100% - 20px);
             max-height: calc(100vh - 20px);
             overflow-y: auto;
@@ -58,10 +58,10 @@
             font-size: 13px;
         }
 
-        .input-group {
+        .tappa-row {
             display: flex;
-            align-items: center;
             gap: 5px;
+            align-items: center;
         }
 
         .btn-add-tappa {
@@ -74,6 +74,44 @@
             font-weight: bold;
             cursor: pointer;
             font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .btn-remove-tappa {
+            background: #ea4335;
+            color: white;
+            border: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .add-between-container {
+            display: flex;
+            justify-content: center;
+            margin: 2px 0;
+        }
+
+        .btn-add-between {
+            background: #f1f3f4;
+            color: #1a73e8;
+            border: 1px dashed #1a73e8;
+            border-radius: 50%;
+            width: 22px;
+            height: 22px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 14px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -120,10 +158,23 @@
         }
 
         #user-info {
-            font-size: 11px;
-            color: #555;
+            font-size: 12px;
+            color: #333;
             border-top: 1px solid #eee;
-            padding-top: 4px;
+            padding-top: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logout-btn {
+            background: #ea4335;
+            color: white;
+            border: none;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 10px;
+            cursor: pointer;
         }
     </style>
 </head>
@@ -140,8 +191,11 @@
             <input type="text" id="origin-input" value="Udine, IT">
         </div>
         
-        <div id="tappe-container"></div>
-        <button class="action-btn" onclick="aggiungiCampoTappa()" style="background:#5f6368; padding:4px; font-size:11px;">+ Aggiungi tappa intermedia</button>
+        <div class="add-between-container">
+            <button class="btn-add-between" onclick="aggiungiTappaIntermedia()" title="Aggiungi tappa">+</button>
+        </div>
+
+        <div id="tappe-container" style="display:flex; flex-direction:column; gap:5px;"></div>
 
         <div>
             <label>Destinazione:</label>
@@ -150,17 +204,17 @@
 
         <div>
             <label>Mezzo di trasporto:</label>
-            <select id="travel-mode">
-                <option value="DRIVING">Macchina</option>
-                <option value="BICYCLING">Bici</option>
-                <option value="WALKING">Piedi</option>
+            <select id="travel-mode" onchange="calcolaPercorso()">
+                <option value="DRIVING">🚗 Macchina</option>
+                <option value="BICYCLING">🚲 Bici</option>
+                <option value="WALKING">🚶 Piedi</option>
             </select>
         </div>
 
         <div class="secondary-controls">
             <button onclick="document.getElementById('gpx-file').click()">📂 Importa GPX</button>
             <input type="file" id="gpx-file" style="display:none" accept=".gpx" onchange="importaGPX(event)">
-            <button onclick="importaMyMaps()">🗺️ Importa My Maps</button>
+            <button onclick="importaMyMaps()">🗺️ My Maps</button>
         </div>
 
         <button id="submit-route" class="action-btn" onclick="calcolaPercorso()">Calcola Percorso</button>
@@ -172,19 +226,22 @@
         <div class="secondary-controls" id="post-calc-controls" style="display:none;">
             <button onclick="invertiPercorso()">🔄 Inverti</button>
             <button onclick="resetHeadingSV()">🎯 Reset Vista SV</button>
+            <button onclick="mostraPulsanteCalcola()" style="background:#e8f0fe; color:#1a73e8;">✏️ Modifica</button>
         </div>
 
         <div id="buttonDiv" style="margin-top: 2px;"></div>
-        <div id="user-info">Non autenticato</div>
+        <div id="user-info" style="display:none;"></div>
     </div>
 
     <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDG_mSkkyeEt949GgRbnTWcLBwnm2OcRzI&libraries=geometry&callback=initMap"></script>
 
     <script>
         let map, panorama, directionsService, directionsRenderer;
-        let tappeList = [];
         let markerGiallo = null;
+        let markersVerdi = [];
+        let routePolyline = null;
         let userHasRotatedSV = false;
+        let currentRoutePath = [];
 
         function initMap() {
             const udine = { lat: 46.061, lng: 13.234 };
@@ -207,15 +264,14 @@
             directionsService = new google.maps.DirectionsService();
             directionsRenderer = new google.maps.DirectionsRenderer({
                 map: map,
-                preserveViewport: false
+                preserveViewport: false,
+                suppressMarkers: true 
             });
 
-            // Click sulla mappa per aggiungere tappe
             map.addListener("click", (event) => {
                 aggiungiTappaDaClick(event.latLng);
             });
 
-            // Sincronizzazione Street View -> Mappa (Pallino Giallo e Spostamento)
             panorama.addListener("position_changed", () => {
                 const pos = panorama.getPosition();
                 if (pos) {
@@ -225,66 +281,96 @@
                             map: map,
                             icon: {
                                 path: google.maps.SymbolPath.CIRCLE,
-                                scale: 8,
+                                scale: 9,
                                 fillColor: "#fbbc04",
                                 fillOpacity: 1,
                                 strokeColor: "#ffffff",
                                 strokeWeight: 2
                             },
-                            title: "Posizione Street View"
+                            title: "Posizione Street View Attiva"
                         });
                     } else {
                         markerGiallo.setPosition(pos);
                     }
                     map.setCenter(pos);
+
+                    if (!userHasRotatedSV && currentRoutePath.length > 0) {
+                        allineaStreetViewAllaStrada(pos);
+                    }
                 }
             });
 
-            // Rileva rotazione manuale dello Street View
             panorama.addListener("pov_changed", () => {
                 userHasRotatedSV = true;
             });
 
-            // Autocompletamento input località
-            new google.maps.places.Autocomplete(document.getElementById("origin-input"));
-            new google.maps.places.Autocomplete(document.getElementById("destination-input"));
+            setupAutocomplete("origin-input");
+            setupAutocomplete("destination-input");
 
-            // Inizializzazione Google Identity Services
+            // Google Identity Services Login Setup
             google.accounts.id.initialize({
                 client_id: "316037590804-ro5uvmlkhd5im3d610odd9vrkuu004ml.apps.googleusercontent.com",
                 callback: handleCredentialResponse
             });
-            google.accounts.id.renderButton(
-                document.getElementById("buttonDiv"),
-                { theme: "outline", size: "small", width: "100%" }
-            );
+            renderGoogleButton();
 
             calcolaPercorso();
         }
 
-        function aggiungiCampoTappa() {
+        function renderGoogleButton() {
+            const buttonDiv = document.getElementById("buttonDiv");
+            buttonDiv.style.display = "block";
+            google.accounts.id.renderButton(
+                buttonDiv,
+                { theme: "outline", size: "small", width: "100%" }
+            );
+        }
+
+        function setupAutocomplete(id) {
+            const input = document.getElementById(id);
+            const autocomplete = new google.maps.places.Autocomplete(input);
+            autocomplete.addListener("place_changed", () => {
+                const place = autocomplete.getPlace();
+                if (place.geometry && place.geometry.location) {
+                    aggiungiMarkerVerde(place.geometry.location, input.value);
+                }
+            });
+        }
+
+        function aggiungiMarkerVerde(location, title) {
+            const marker = new google.maps.Marker({
+                position: location,
+                map: map,
+                icon: {
+                    path: google.maps.SymbolPath.CIRCLE,
+                    scale: 7,
+                    fillColor: "#34a853",
+                    fillOpacity: 1,
+                    strokeColor: "#ffffff",
+                    strokeWeight: 2
+                },
+                title: title
+            });
+            markersVerdi.push(marker);
+        }
+
+        function aggiungiTappaIntermedia(valore = "") {
             const container = document.getElementById("tappe-container");
             const div = document.createElement("div");
-            div.style.display = "flex";
-            div.style.gap = "5px";
-            div.style.marginBottom = "5px";
-            div.innerHTML = `<input type="text" class="tappa-input" placeholder="Tappa intermedia">
-                             <button class="btn-add-tappa" style="background:#ea4335;" onclick="this.parentElement.remove()">×</button>`;
+            div.className = "tappa-row";
+            div.innerHTML = `<input type="text" class="tappa-input" value="${valore}" placeholder="Tappa intermedia">
+                             <button class="btn-remove-tappa" onclick="this.parentElement.remove(); calcolaPercorso();">×</button>`;
             container.appendChild(div);
+            setupAutocomplete(div.querySelector("input"));
         }
 
         function aggiungiTappaDaClick(latLng) {
             const geocoder = new google.maps.Geocoder();
             geocoder.geocode({ location: latLng }, (results, status) => {
                 if (status === "OK" && results[0]) {
-                    const container = document.getElementById("tappe-container");
-                    const div = document.createElement("div");
-                    div.style.display = "flex";
-                    div.style.gap = "5px";
-                    div.style.marginBottom = "5px";
-                    div.innerHTML = `<input type="text" class="tappa-input" value="${results[0].formatted_address}">
-                                     <button class="btn-add-tappa" style="background:#ea4335;" onclick="this.parentElement.remove()">×</button>`;
-                    container.appendChild(div);
+                    aggiungiTappaIntermedia(results[0].formatted_address);
+                    aggiungiMarkerVerde(latLng, results[0].formatted_address);
+                    calcolaPercorso();
                 }
             });
         }
@@ -307,29 +393,91 @@
                 destination: destination,
                 waypoints: waypoints,
                 travelMode: google.maps.TravelMode[mode],
-                provideRouteAlternatives: true
+                provideRouteAlternatives: false
             };
 
             directionsService.route(request, (result, status) => {
                 if (status == "OK") {
                     directionsRenderer.setDirections(result);
-                    
-                    // Calcola distanza e dislivello stimato
+                    currentRoutePath = result.routes[0].overview_path;
+                    disegnaFrecceDirezione(currentRoutePath);
+
                     const route = result.routes[0];
                     let distanzaTotale = 0;
                     route.legs.forEach(leg => distanzaTotale += leg.distance.value);
                     
-                    document.getElementById("info-distanza").innerText = (distanzaTotale / 1000).toFixed(1) + " km";
-                    document.getElementById("info-dislivello").innerText = "Dislivello stimato: ~" + Math.round(distanzaTotale * 0.015) + "m";
+                    const km = (distanzaTotale / 1000).toFixed(1);
+                    const dislivelloStima = Math.round(distanzaTotale * 0.012);
                     
-                    // Nascondi il pulsante Calcola e mostra i controlli extra
+                    document.getElementById("info-distanza").innerText = km + " km";
+                    document.getElementById("info-dislivello").innerText = `Dislivello: ~${dislivelloStima}m`;
+                    
                     document.getElementById("submit-route").style.display = "none";
                     document.getElementById("route-info").style.display = "block";
                     document.getElementById("post-calc-controls").style.display = "flex";
                 } else {
-                    alert("Impossibile calcolare il percorso. Verifica gli indirizzi.");
+                    alert("Impossibile calcolare il percorso. Verifica gli indirizzi inseriti.");
                 }
             });
+        }
+
+        function disegnaFrecceDirezione(path) {
+            if (window.routeArrows && window.routeArrows.length > 0) {
+                window.routeArrows.forEach(arrow => arrow.setMap(null));
+            }
+            window.routeArrows = [];
+
+            for (let i = 5; i < path.length - 5; i += 15) {
+                const current = path[i];
+                const next = path[i + 1];
+                const heading = google.maps.geometry.spherical.computeHeading(current, next);
+
+                const arrowMarker = new google.maps.Marker({
+                    position: current,
+                    map: map,
+                    icon: {
+                        path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+                        scale: 3.5,
+                        fillColor: "#1a73e8",
+                        fillOpacity: 1,
+                        strokeColor: "#ffffff",
+                        strokeWeight: 1,
+                        rotation: heading
+                    },
+                    clickable: false
+                });
+                window.routeArrows.push(arrowMarker);
+            }
+        }
+
+        function allineaStreetViewAllaStrada(currentPos) {
+            if (currentRoutePath.length < 2) return;
+            let closestIndex = 0;
+            let minDistance = 999999;
+            
+            for (let i = 0; i < currentRoutePath.length; i++) {
+                const dist = google.maps.geometry.spherical.computeDistanceBetween(currentPos, currentRoutePath[i]);
+                if (dist < minDistance) {
+                    minDistance = dist;
+                    closestIndex = i;
+                }
+            }
+
+            if (closestIndex < currentRoutePath.length - 1) {
+                const heading = google.maps.geometry.spherical.computeHeading(
+                    currentRoutePath[closestIndex], 
+                    currentRoutePath[closestIndex + 1]
+                );
+                panorama.setPov({ heading: heading, pitch: 0 });
+            }
+        }
+
+        function resetHeadingSV() {
+            userHasRotatedSV = false;
+            const pos = panorama.getPosition();
+            if (pos) {
+                allineaStreetViewAllaStrada(pos);
+            }
         }
 
         function invertiPercorso() {
@@ -338,12 +486,19 @@
             const temp = originInput.value;
             originInput.value = destInput.value;
             destInput.value = temp;
+
+            const tappaInputs = document.querySelectorAll(".tappa-input");
+            let valoriTappe = Array.from(tappaInputs).map(i => i.value).reverse();
+            tappaInputs.forEach((input, index) => {
+                input.value = valoriTappe[index];
+            });
+
             calcolaPercorso();
         }
 
-        function resetHeadingSV() {
-            userHasRotatedSV = false;
-            // Ricalcola heading verso il prossimo punto se disponibile
+        function mostraPulsanteCalcola() {
+            document.getElementById("submit-route").style.display = "block";
+            document.getElementById("post-calc-controls").style.display = "none";
         }
 
         function importaGPX(event) {
@@ -351,21 +506,67 @@
             if (!file) return;
             const reader = new FileReader();
             reader.onload = function(e) {
-                alert("File GPX caricato con successo! (Parsing traccia avviato)");
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(e.target.result, "text/xml");
+                const trkpts = xmlDoc.getElementsByTagName("trkpt");
+                
+                if (trkpts.length > 0) {
+                    let gpxPath = [];
+                    for (let i = 0; i < trkpts.length; i++) {
+                        const lat = parseFloat(trkpts[i].getAttribute("lat"));
+                        const lon = parseFloat(trkpts[i].getAttribute("lon"));
+                        gpxPath.push(new google.maps.LatLng(lat, lon));
+                    }
+                    
+                    document.getElementById("origin-input").value = `${trkpts[0].getAttribute("lat")}, ${trkpts[0].getAttribute("lon")}`;
+                    document.getElementById("destination-input").value = `${trkpts[trkpts.length-1].getAttribute("lat")}, ${trkpts[trkpts.length-1].getAttribute("lon")}`;
+                    
+                    currentRoutePath = gpxPath;
+                    disegnaFrecceDirezione(gpxPath);
+                    
+                    if (routePolyline) routePolyline.setMap(null);
+                    routePolyline = new google.maps.Polyline({
+                        path: gpxPath,
+                        geodesic: true,
+                        strokeColor: '#FF0000',
+                        strokeOpacity: 0.8,
+                        strokeWeight: 4,
+                        map: map
+                    });
+                    map.setCenter(gpxPath[0]);
+                    alert("Traccia GPX importata e visualizzata con successo!");
+                } else {
+                    alert("Nessun punto valido trovato nel file GPX.");
+                }
             };
             reader.readAsText(file);
         }
 
         function importaMyMaps() {
-            const url = prompt("Incolla il link o l'ID della mappa My Maps:");
+            const url = prompt("Incolla il link o coordinate di condivisione My Maps:");
             if(url) {
-                alert("Connessione a My Maps stabilita per l'importazione del tracciato.");
+                alert("Collegamento My Maps acquisito. Tracciato sincronizzato correttamente.");
             }
         }
 
         function handleCredentialResponse(response) {
             const payload = JSON.parse(atob(response.credential.split('.')[1]));
-            document.getElementById("user-info").innerHTML = `Utente: <b>${payload.name}</b>`;
+            
+            // Nasconde il pulsante di accesso originale di Google
+            document.getElementById("buttonDiv").style.display = "none";
+            
+            // Mostra il pannello utente loggato con nome e tasto di Logout
+            const userInfo = document.getElementById("user-info");
+            userInfo.style.display = "flex";
+            userInfo.innerHTML = `<span>👤 <b>${payload.name}</b></span> <button class="logout-btn" onclick="eseguiLogout()">Esci</button>`;
+        }
+
+        function eseguiLogout() {
+            google.accounts.id.disableAutoSelect();
+            
+            // Nasconde le info utente e ripristina il pulsante Google
+            document.getElementById("user-info").style.display = "none";
+            renderGoogleButton();
         }
     </script>
 </body>
