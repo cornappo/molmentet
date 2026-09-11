@@ -12,6 +12,22 @@ function log(msg) {
     console.log(`[LOG] ${msg}`);
 }
 
+// Funzione per aprire/chiudere il pannello laterale (stile Google Maps)
+function toggleSidebar() {
+    const sidebar = document.getElementById("sidebar");
+    const toggleBtn = document.getElementById("sidebar-toggle");
+    
+    if (sidebar.style.transform === "translateX(-100%)") {
+        sidebar.style.transform = "translateX(0)";
+        toggleBtn.style.display = "none";
+        log("Pannello laterale aperto.");
+    } else {
+        sidebar.style.transform = "translateX(-100%)";
+        toggleBtn.style.display = "flex";
+        log("Pannello laterale chiuso.");
+    }
+}
+
 // Recupera la chiave in sicurezza dal server ed inizializza Google Maps
 fetch('/api/config')
     .then(res => res.json())
