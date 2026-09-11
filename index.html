@@ -60,7 +60,7 @@
 
         #panel input, #panel select {
             width: 100%;
-            padding: 10px 10px 10px 38px;
+            padding: 10px 36px 10px 38px;
             border: 1px solid #dadce0;
             border-radius: 8px;
             font-size: 14px;
@@ -76,7 +76,7 @@
             box-shadow: 0 1px 3px rgba(26,115,232,0.2);
         }
 
-        /* Check verde di conferma località corretta */
+        /* Check verde di conferma località corretta integrato nell'input */
         .status-check {
             position: absolute;
             right: 12px;
@@ -217,21 +217,31 @@
             background: #fce8e6;
         }
 
+        /* Override stili Autocomplete Google Maps (Look & Feel nativo pulito) */
         .pac-container {
-            border-radius: 8px;
-            margin-top: 4px;
+            border-radius: 0 0 8px 8px;
+            margin-top: -2px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             border: 1px solid #dadce0;
+            border-top: none;
             font-family: Roboto, Arial, sans-serif;
             z-index: 999999;
         }
         .pac-item {
-            padding: 8px 12px;
+            padding: 10px 12px;
             font-size: 13px;
             cursor: pointer;
+            border-top: 1px solid #f1f3f4;
         }
         .pac-item:hover {
             background-color: #f8f9fa;
+        }
+        .pac-matched {
+            font-weight: 500;
+            color: #1a73e8;
+        }
+        .pac-icon {
+            display: none; /* Rimuove le icone predefinite per uno stile più pulito */
         }
     </style>
 </head>
@@ -506,8 +516,8 @@
             }
             routeArrows = [];
 
-            // Aggiunge frecce direzionali lungo il percorso a intervalli regolari
-            for (let i = 5; i < path.length - 5; i += 15) {
+            // Aggiunge frecce direzionali lungo il percorso a intervalli regolari orientate con precisione
+            for (let i = 5; i < path.length - 5; i += 12) {
                 const current = path[i];
                 const next = path[i + 1];
                 const heading = google.maps.geometry.spherical.computeHeading(current, next);
@@ -517,7 +527,7 @@
                     map: map,
                     icon: {
                         path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-                        scale: 4,
+                        scale: 4.5,
                         fillColor: "#1a73e8",
                         fillOpacity: 1,
                         strokeColor: "#ffffff",
@@ -556,7 +566,7 @@
             userHasRotatedSV = false;
             const pos = panorama.getPosition();
             if (pos) {
-                allineaSenseViewAllaStrada(pos);
+                allineaStreetViewAllaStrada(pos);
             }
         }
 
