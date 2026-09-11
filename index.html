@@ -341,6 +341,7 @@
         let currentRoutePath = [];
         let routeArrows = [];
         let isUpdatingFromMap = false;
+        let allowFreeMovement = false; // Flag per consentire lo spostamento fuori percorso tramite doppio click
 
         function log(msg) {
             const logBox = document.getElementById("system-log");
@@ -377,47 +378,60 @@
                 suppressMarkers: true 
             });
 
+            // Click singolo: Aggiunge solo la tappa intermedia
             map.addListener("click", (event) => {
                 log(`Click su mappa: ${event.latLng.lat().toFixed(4)}, ${event.latLng.lng().toFixed(4)}`);
-                
+                aggiungiTappaDaClick(event.latLng);
+            });
+
+            // Doppio click: Consente di spostare liberamente il pallino e lo StreetView fuori dal percorso
+            map.addListener("dblclick", (event) => {
+                log(`Doppio click su mappa: sblocco temporaneo posizione libera.`);
+                allowFreeMovement = true;
                 const svService = new google.maps.StreetViewService();
                 svService.getPanorama({ location: event.latLng, radius: 100 }, (data, status) => {
                     if (status === "OK") {
                         isUpdatingFromMap = true;
                         panorama.setPosition(data.location.latLng);
                         isUpdatingFromMap = false;
-
-                        if (currentRoutePath.length > 0) {
-                            userHasRotatedSV = false;
-                            allineaStreetViewAllaStrada(data.location.latLng);
-                        }
-                        log(`Street View contestuale aggiornato a ${data.location.latLng.lat().toFixed(4)}, ${data.location.latLng.lng().toFixed(4)}`);
+                        log(`Street View spostato liberamente a ${data.location.latLng.lat().toFixed(4)}, ${data.location.latLng.lng().toFixed(4)}`);
                     } else {
-                        log("Nessun panorama Street View disponibile nelle vicinanze del click.");
+                        log("Nessun panorama Street View disponibile per il doppio click.");
                     }
                 });
-
-                aggiungiTappaDaClick(event.latLng);
             });
 
+            // Trascina mappa (dragend): Riporta sempre il pallino sul percorso attivo (nella parte centrale/più vicina)
             map.addListener("dragend", () => {
+                allowFreeMovement = false; // Riattiva il vincolo al percorso
                 const center = map.getCenter();
-                const svService = new google.maps.StreetViewService();
-                svService.getPanorama({ location: center, radius: 50 }, (data, status) => {
-                    if (status === "OK") {
+                
+                if (currentRoutePath.length > 0) {
+                    // Trova il punto più vicino sul percorso rispetto al centro corrente della mappa
+                    let closestPoint = trovaPuntoPiuVicinoSulPercorso(center);
+                    if (closestPoint) {
                         isUpdatingFromMap = true;
-                        panorama.setPosition(data.location.latLng);
+                        panorama.setPosition(closestPoint);
                         isUpdatingFromMap = false;
-                        log(`Street View sincronizzato al centro mappa: ${data.location.latLng.lat().toFixed(4)}, ${data.location.latLng.lng().toFixed(4)}`);
+                        log(`Mappa trascinata: pallino e Street View ricalibrati sul percorso.`);
                     }
-                });
+                } else {
+                    const svService = new google.maps.StreetViewService();
+                    svService.getPanorama({ location: center, radius: 50 }, (data, status) => {
+                        if (status === "OK") {
+                            isUpdatingFromMap = true;
+                            panorama.setPosition(data.location.latLng);
+                            isUpdatingFromMap = false;
+                        }
+                    });
+                }
             });
 
             panorama.addListener("position_changed", () => {
                 let pos = panorama.getPosition();
                 if (pos) {
-                    // Vincola il pallino giallo rigidamente al percorso stabilito se esiste
-                    if (currentRoutePath.length > 0) {
+                    // Vincola il pallino giallo al percorso solo se non è attivo lo sblocco libero (doppio click)
+                    if (currentRoutePath.length > 0 && !allowFreeMovement) {
                         let closestPoint = trovaPuntoPiuVicinoSulPercorso(pos);
                         if (closestPoint) {
                             pos = closestPoint;
@@ -430,7 +444,7 @@
                             map: map,
                             icon: {
                                 path: google.maps.SymbolPath.CIRCLE,
-                                scale: 13, // Ingrandito
+                                scale: 13,
                                 fillColor: "#fbbc04",
                                 fillOpacity: 1,
                                 strokeColor: "#ffffff",
@@ -592,6 +606,7 @@
         }
 
         function calcolaPercorso() {
+            allowFreeMovement = false; // Ricalcolando il percorso si ripristina il vincolo rigido
             const origin = document.getElementById("origin-input").value;
             const destination = document.getElementById("destination-input").value;
             const mode = document.getElementById("travel-mode").value;
