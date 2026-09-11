@@ -7,6 +7,12 @@ let allowFreeMovement = false;
 let isUpdatingFromMap = false;
 let longPressTimer = null;
 
+// Variabili per la riproduzione automatica passo-passo e trascinamento pallino
+let playInterval = null;
+let currentPathIndex = 0;
+let isPlaying = false;
+let isDraggingYellowMarker = false;
+
 function log(msg) {
     console.log(`[LOG] ${msg}`);
 }
@@ -81,18 +87,19 @@ function initMap() {
     map.addListener("dragstart", () => {
         cancellaTimerAnteprima();
         chiudiAnteprima();
+        fermaRiproduzione();
     });
 
-    // Aggiorna lo Street View e il pallino giallo quando l'utente finisce di trascinare la mappa
     map.addListener("dragend", () => {
         const center = map.getCenter();
-        if (center) {
+        if (center && !isDraggingYellowMarker) {
             const svService = new google.maps.StreetViewService();
             svService.getPanorama({ location: center, radius: 100 }, (data, status) => {
                 if (status === "OK") {
                     isUpdatingFromMap = true;
                     panorama.setPosition(data.location.latLng);
                     isUpdatingFromMap = false;
+                    aggiornaIndicePercorsoPiuVicino(data.location.latLng);
                     log(`Mappa trascinata: Street View aggiornato a ${data.location.latLng.lat().toFixed(4)}, ${data.location.latLng.lng().toFixed(4)}`);
                 }
             });
@@ -109,6 +116,7 @@ function initMap() {
     map.addListener("dblclick", (event) => {
         cancellaTimerAnteprima();
         chiudiAnteprima();
+        fermaRiproduzione();
         log(`Doppio click su mappa: posizionamento libero attivato.`);
         allowFreeMovement = true;
         const svService = new google.maps.StreetViewService();
@@ -124,7 +132,6 @@ function initMap() {
     panorama.addListener("position_changed", () => {
         let pos = panorama.getPosition();
         if (pos) {
-            // Se esiste un percorso, il pallino giallo si posiziona rigorosamente sul punto più vicino del percorso
             if (currentRoutePath.length > 0 && !allowFreeMovement) {
                 let closestPoint = trovaPuntoPiuVicinoSulPercorso(pos);
                 if (closestPoint) {
@@ -136,6 +143,7 @@ function initMap() {
                 markerGiallo = new google.maps.Marker({
                     position: pos,
                     map: map,
+                    draggable: true, // Permette di trascinare il pallino giallo direttamente lungo il percorso!
                     icon: {
                         path: google.maps.SymbolPath.CIRCLE,
                         scale: 13,
@@ -144,19 +152,48 @@ function initMap() {
                         strokeColor: "#ffffff",
                         strokeWeight: 2.5
                     },
-                    title: "Posizione Street View sul Percorso"
+                    title: "Trascina il pallino lungo il percorso"
                 });
+
+                // Gestione del trascinamento diretto del pallino giallo
+                markerGiallo.addListener("dragstart", () => {
+                    isDraggingYellowMarker = true;
+                    fermaRiproduzione();
+                });
+
+                markerGiallo.addListener("drag", (event) => {
+                    if (currentRoutePath.length > 0) {
+                        let closest = trovaPuntoPiuVicinoSulPercorso(event.latLng);
+                        if (closest) markerGiallo.setPosition(closest);
+                    }
+                });
+
+                markerGiallo.addListener("dragend", (event) => {
+                    isDraggingYellowMarker = false;
+                    let target = event.latLng;
+                    if (currentRoutePath.length > 0) {
+                        target = trovaPuntoPiuVicinoSulPercorso(event.latLng);
+                    }
+                    if (target) {
+                        isUpdatingFromMap = true;
+                        panorama.setPosition(target);
+                        isUpdatingFromMap = false;
+                        aggiornaIndicePercorsoPiuVicino(target);
+                        log(`Pallino giallo rilasciato sul percorso: aggiornato Street View.`);
+                    }
+                });
+
             } else {
-                markerGiallo.setPosition(pos);
+                if (!isDraggingYellowMarker) {
+                    markerGiallo.setPosition(pos);
+                }
                 markerGiallo.setMap(map);
             }
 
-            // Centra automaticamente la mappa sul pallino giallo (che si trova sul percorso)
-            if (!isUpdatingFromMap) {
+            if (!isUpdatingFromMap && !isDraggingYellowMarker) {
                 map.setCenter(pos);
             }
 
-            // Allineamento automatico e costante dello Street View alla direzione di marcia
             if (currentRoutePath.length > 0 && !allowFreeMovement) {
                 allineaStreetViewAllaStrada(pos);
             }
@@ -165,8 +202,8 @@ function initMap() {
 
     setupAutocomplete("origin-input", "check-origin");
     setupAutocomplete("destination-input", "check-dest");
+    creaControlliPlayPausaUI();
 
-    // Imposta valori di default se i campi sono vuoti all'avvio
     const originInput = document.getElementById("origin-input");
     const destInput = document.getElementById("destination-input");
     if (originInput && !originInput.value) originInput.value = "Udine";
@@ -182,6 +219,20 @@ function initMap() {
 
     calcolaPercorso();
     log("Mappa e servizi inizializzati con successo.");
+}
+
+function creaControlliPlayPausaUI() {
+    const postCalcControls = document.getElementById("post-calc-controls");
+    if (postCalcControls && !document.getElementById("btn-play-route")) {
+        const playContainer = document.createElement("div");
+        playContainer.style.cssText = "display: flex; gap: 6px; margin-top: 10px; width: 100%; align-items: center;";
+        playContainer.innerHTML = `
+            <button id="btn-play-route" onclick="togglePlayRoute()" style="flex:2; background:#1a73e8; color:white; border:none; padding:8px; border-radius:4px; cursor:pointer; font-weight:500;">▶ Play Rotatoria</button>
+            <button onclick="stepRouteForward(-3)" title="Indietro" style="flex:1; background:#f1f3f4; border:1px solid #dadce0; padding:8px; border-radius:4px; cursor:pointer;">◀◀</button>
+            <button onclick="stepRouteForward(3)" title="Avanti" style="flex:1; background:#f1f3f4; border:1px solid #dadce0; padding:8px; border-radius:4px; cursor:pointer;">▶▶</button>
+        `;
+        postCalcControls.parentNode.insertBefore(playContainer, postCalcControls.nextSibling);
+    }
 }
 
 function avviaTimerAnteprima(latLng) {
@@ -230,9 +281,85 @@ function trovaPuntoPiuVicinoSulPercorso(targetPos) {
         if (dist < minDistance) {
             minDistance = dist;
             closestPoint = currentRoutePath[i];
+            currentPathIndex = i;
         }
     }
     return closestPoint;
+}
+
+function aggiornaIndicePercorsoPiuVicino(targetPos) {
+    if (!currentRoutePath || currentRoutePath.length === 0) return;
+    let minDistance = Infinity;
+    for (let i = 0; i < currentRoutePath.length; i++) {
+        const dist = google.maps.geometry.spherical.computeDistanceBetween(targetPos, currentRoutePath[i]);
+        if (dist < minDistance) {
+            minDistance = dist;
+            currentPathIndex = i;
+        }
+    }
+}
+
+function togglePlayRoute() {
+    const btn = document.getElementById("btn-play-route");
+    if (isPlaying) {
+        fermaRiproduzione();
+        if (btn) {
+            btn.innerText = "▶ Play Rotatoria";
+            btn.style.background = "#1a73e8";
+        }
+    } else {
+        if (currentRoutePath.length === 0) return;
+        isPlaying = true;
+        if (btn) {
+            btn.innerText = "❚❚ Pausa";
+            btn.style.background = "#d93025";
+        }
+        log("Avvio riproduzione automatica lungo la rotonda/percorso.");
+        
+        playInterval = setInterval(() => {
+            if (currentPathIndex < currentRoutePath.length) {
+                isUpdatingFromMap = true;
+                panorama.setPosition(currentRoutePath[currentPathIndex]);
+                isUpdatingFromMap = false;
+                currentPathIndex++;
+            } else {
+                fermaRiproduzione();
+                if (btn) {
+                    btn.innerText = "▶ Play Rotatoria";
+                    btn.style.background = "#1a73e8";
+                }
+                log("Fine percorso raggiunta.");
+            }
+        }, 1000); // 1 secondo a punto per ispezionare bene le rotatorie
+    }
+}
+
+function fermaRiproduzione() {
+    if (playInterval) {
+        clearInterval(playInterval);
+        playInterval = null;
+    }
+    isPlaying = false;
+}
+
+function stepRouteForward(steps) {
+    fermaRiproduzione();
+    const btn = document.getElementById("btn-play-route");
+    if (btn) {
+        btn.innerText = "▶ Play Rotatoria";
+        btn.style.background = "#1a73e8";
+    }
+    
+    currentPathIndex += steps;
+    if (currentPathIndex >= currentRoutePath.length) currentPathIndex = currentRoutePath.length - 1;
+    if (currentPathIndex < 0) currentPathIndex = 0;
+    
+    if (currentRoutePath[currentPathIndex]) {
+        isUpdatingFromMap = true;
+        panorama.setPosition(currentRoutePath[currentPathIndex]);
+        isUpdatingFromMap = false;
+        log(`Spostamento manuale al punto ${currentPathIndex}/${currentRoutePath.length}`);
+    }
 }
 
 function setTravelMode(mode, btnElement) {
@@ -344,6 +471,9 @@ function aggiungiTappaDaClick(latLng) {
 
 function calcolaPercorso() {
     allowFreeMovement = false;
+    fermaRiproduzione();
+    currentPathIndex = 0;
+    
     const origin = document.getElementById("origin-input").value.trim();
     const destination = document.getElementById("destination-input").value.trim();
 
@@ -391,7 +521,7 @@ function calcolaPercorso() {
             document.getElementById("submit-route").style.display = "none";
             document.getElementById("route-info").style.display = "block";
             document.getElementById("post-calc-controls").style.display = "flex";
-            log(`Percorso calcolato con successo: ${km} km.`);
+            log(`Percorso calcolato con successo: ${km} km. Punti totali traccia: ${currentRoutePath.length}`);
         } else {
             log(`ERRORE calcolo percorso: ${status}`);
             currentRoutePath = [];
