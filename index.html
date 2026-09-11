@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Route & StreetView Sync</title>
+    <title>Route & StreetView Sync with Google Login</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body, html { width: 100%; height: 100%; overflow: hidden; font-family: sans-serif; }
@@ -15,15 +16,8 @@
             height: 100vh;
         }
         
-        #map {
-            width: 100%;
-            height: 50%;
-        }
-        
-        #street-view {
-            width: 100%;
-            height: 50%;
-        }
+        #map { width: 100%; height: 50%; }
+        #street-view { width: 100%; height: 50%; }
 
         @media (min-width: 768px) {
             #app-container { flex-direction: row; }
@@ -76,6 +70,14 @@
         #panel button:hover {
             background: #1557b0;
         }
+
+        #user-info {
+            font-size: 12px;
+            color: #555;
+            margin-top: 4px;
+            border-top: 1px solid #eee;
+            padding-top: 6px;
+        }
     </style>
 </head>
 <body>
@@ -95,9 +97,12 @@
             <input type="text" id="destination-input" value="Nimis, IT">
         </div>
         <button id="submit-route" onclick="calcolaPercorso()">Calcola Percorso</button>
+        
+        <!-- Pulsante Google Sign-In -->
+        <div id="buttonDiv" style="margin-top: 5px;"></div>
+        <div id="user-info">Non autenticato</div>
     </div>
 
-    <!-- Script inserito con la tua chiave API corretta -->
     <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDG_mSkkyeEt949GgRbnTWcLBwnm2OcRzI&callback=initMap"></script>
 
     <script>
@@ -127,7 +132,6 @@
                 preserveViewport: false
             });
 
-            // Calcola il percorso iniziale preimpostato
             calcolaPercorso();
 
             map.addListener("idle", () => {
@@ -140,6 +144,30 @@
                     }
                 });
             });
+
+            // Inizializzazione Google Identity Services
+            google.accounts.id.initialize({
+                client_id: "TUA_CLIENT_ID_QUI.apps.googleusercontent.com",
+                callback: handleCredentialResponse
+            });
+            google.accounts.id.renderButton(
+                document.getElementById("buttonDiv"),
+                { theme: "outline", size: "large", width: "100%" }
+            );
+        }
+
+        function handleCredentialResponse(response) {
+            const responsePayload = parseJwt(response.credential);
+            document.getElementById("user-info").innerHTML = `Benvenuto, <b>${responsePayload.name}</b> (${responsePayload.email})`;
+        }
+
+        function parseJwt(token) {
+            let base64Url = token.split('.')[1];
+            let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            let jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                return '%' + ('0' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+            return JSON.parse(jsonPayload);
         }
 
         function calcolaPercorso() {
