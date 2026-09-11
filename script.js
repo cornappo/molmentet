@@ -114,9 +114,10 @@ function initMap() {
                 });
             } else {
                 markerGiallo.setPosition(pos);
+                markerGiallo.setMap(map);
             }
 
-            if (!isUpdatingFromMap && !allowFreeMovement) {
+            if (!isUpdatingFromMap) {
                 map.setCenter(pos);
             }
 
@@ -191,7 +192,7 @@ function mostraAnteprimaStreetView(targetPos) {
 function trovaPuntoPiuVicinoSulPercorso(targetPos) {
     if (!currentRoutePath || currentRoutePath.length === 0) return null;
     let closestPoint = currentRoutePath[0];
-    let minDistance = 999999;
+    let minDistance = Infinity;
     
     for (let i = 0; i < currentRoutePath.length; i++) {
         const dist = google.maps.geometry.spherical.computeDistanceBetween(targetPos, currentRoutePath[i]);
@@ -315,7 +316,6 @@ function calcolaPercorso() {
     const origin = document.getElementById("origin-input").value.trim();
     const destination = document.getElementById("destination-input").value.trim();
 
-    // Se i campi principali sono vuoti, esce silenziosamente senza mostrare errori
     if (!origin || !destination) {
         log("Campi di partenza o arrivo vuoti: calcolo percorso saltato.");
         return;
@@ -364,7 +364,6 @@ function calcolaPercorso() {
         } else {
             log(`ERRORE calcolo percorso: ${status}`);
             currentRoutePath = [];
-            // Nessun alert bloccante mostrato all'utente
         }
     });
 }
@@ -401,7 +400,7 @@ function disegnaFrecceDirezione(path) {
 function allineaStreetViewAllaStrada(currentPos) {
     if (currentRoutePath.length < 2) return;
     let closestIndex = 0;
-    let minDistance = 999999;
+    let minDistance = Infinity;
     
     for (let i = 0; i < currentRoutePath.length; i++) {
         const dist = google.maps.geometry.spherical.computeDistanceBetween(currentPos, currentRoutePath[i]);
