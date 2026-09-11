@@ -25,7 +25,7 @@
             #street-view { width: 50%; height: 100%; }
         }
 
-        /* Look & Feel stile Google Maps (Card Flottante Bianca con ombra morbida) */
+        /* Stile Pannello laterale identico a Google Maps desktop */
         #panel {
             position: absolute;
             top: 12px;
@@ -38,27 +38,74 @@
             font-size: 14px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
-            max-width: 380px;
+            gap: 12px;
+            max-width: 400px;
             width: calc(100% - 24px);
             max-height: calc(100vh - 24px);
             overflow-y: auto;
+        }
+
+        /* Selettori di modalità viaggio in alto stile Google Maps */
+        .travel-modes {
+            display: flex;
+            justify-content: space-around;
+            border-bottom: 1px solid #e8eaed;
+            padding-bottom: 8px;
+            margin-bottom: 4px;
+        }
+
+        .travel-mode-btn {
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 50%;
+            transition: background 0.2s;
+        }
+
+        .travel-mode-btn:hover {
+            background: #f1f3f4;
+        }
+
+        .travel-mode-btn.active {
+            background: #e8f0fe;
+        }
+
+        /* Layout input itinerario con linea verticale di connessione stile Maps */
+        .route-inputs-wrapper {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .route-inputs-wrapper::before {
+            content: '';
+            position: absolute;
+            left: 19px;
+            top: 22px;
+            bottom: 22px;
+            width: 2px;
+            background: #bdc1c6;
+            z-index: 1;
         }
 
         .input-container {
             position: relative;
             display: flex;
             align-items: center;
+            z-index: 2;
         }
 
         .input-icon {
             position: absolute;
             left: 12px;
             font-size: 16px;
-            color: #5f6368;
+            z-index: 3;
         }
 
-        #panel input, #panel select {
+        #panel input {
             width: 100%;
             padding: 10px 36px 10px 38px;
             border: 1px solid #dadce0;
@@ -70,13 +117,13 @@
             transition: all 0.2s;
         }
 
-        #panel input:focus, #panel select:focus {
+        #panel input:focus {
             background: #fff;
             border-color: #1a73e8;
             box-shadow: 0 1px 3px rgba(26,115,232,0.2);
         }
 
-        /* Check verde di conferma località corretta integrato nell'input */
+        /* Feedback visivo località corretta/selezionata (pallino verde/check) */
         .status-check {
             position: absolute;
             right: 12px;
@@ -84,6 +131,7 @@
             font-weight: bold;
             font-size: 14px;
             display: none;
+            z-index: 3;
         }
 
         .tappa-row {
@@ -108,6 +156,7 @@
             justify-content: center;
             flex-shrink: 0;
             transition: background 0.2s;
+            z-index: 2;
         }
 
         .btn-remove-tappa:hover {
@@ -117,8 +166,10 @@
 
         .add-between-container {
             display: flex;
-            justify-content: center;
-            margin: -2px 0;
+            justify-content: flex-start;
+            padding-left: 12px;
+            margin: -4px 0;
+            z-index: 2;
         }
 
         .btn-add-between {
@@ -217,7 +268,7 @@
             background: #fce8e6;
         }
 
-        /* Override stili Autocomplete Google Maps (Look & Feel nativo pulito) */
+        /* Autocomplete Google Places personalizzato pulito */
         .pac-container {
             border-radius: 0 0 8px 8px;
             margin-top: -2px;
@@ -241,7 +292,7 @@
             color: #1a73e8;
         }
         .pac-icon {
-            display: none; /* Rimuove le icone predefinite per uno stile più pulito */
+            display: none;
         }
     </style>
 </head>
@@ -253,31 +304,34 @@
     </div>
 
     <div id="panel">
-        <div class="input-container">
-            <span class="input-icon">📍</span>
-            <input type="text" id="origin-input" value="Udine, IT" placeholder="Scegli punto di partenza">
-            <span id="check-origin" class="status-check">✓</span>
+        <!-- Selettori Modalità di Spostamento stile Google Maps -->
+        <div class="travel-modes">
+            <button class="travel-mode-btn active" onclick="setTravelMode('DRIVING', this)" title="In auto">🚗</button>
+            <button class="travel-mode-btn" onclick="setTravelMode('TRANSIT', this)" title="Con i mezzi pubblici">🚆</button>
+            <button class="travel-mode-btn" onclick="setTravelMode('WALKING', this)" title="A piedi">🚶‍♂️</button>
+            <button class="travel-mode-btn" onclick="setTravelMode('BICYCLING', this)" title="In bicicletta">🚴‍♂️</button>
         </div>
-        
-        <div class="add-between-container">
-            <button class="btn-add-between" onclick="aggiungiTappaIntermedia()" title="Aggiungi tappa">+</button>
-        </div>
+        <input type="hidden" id="travel-mode" value="DRIVING">
 
-        <div id="tappe-container" style="display:flex; flex-direction:column; gap:8px;"></div>
+        <!-- Campi di input con linea verticale di collegamento -->
+        <div class="route-inputs-wrapper">
+            <div class="input-container">
+                <span class="input-icon">🔵</span>
+                <input type="text" id="origin-input" value="Udine, IT" placeholder="Scegli punto di partenza o clicca sulla mappa">
+                <span id="check-origin" class="status-check">✓</span>
+            </div>
+            
+            <div class="add-between-container">
+                <button class="btn-add-between" onclick="aggiungiTappaIntermedia()" title="Aggiungi meta">+</button>
+            </div>
 
-        <div class="input-container">
-            <span class="input-icon">🏁</span>
-            <input type="text" id="destination-input" value="Nimis, IT" placeholder="Scegli destinazione">
-            <span id="check-dest" class="status-check">✓</span>
-        </div>
+            <div id="tappe-container" style="display:flex; flex-direction:column; gap:8px;"></div>
 
-        <div class="input-container">
-            <span class="input-icon">🚗</span>
-            <select id="travel-mode" onchange="calcolaPercorso()">
-                <option value="DRIVING">In auto</option>
-                <option value="BICYCLING">In bicicletta</option>
-                <option value="WALKING">A piedi</option>
-            </select>
+            <div class="input-container">
+                <span class="input-icon">🔴</span>
+                <input type="text" id="destination-input" value="Nimis, IT" placeholder="Scegli destinazione">
+                <span id="check-dest" class="status-check">✓</span>
+            </div>
         </div>
 
         <div class="secondary-controls">
@@ -389,6 +443,13 @@
             calcolaPercorso();
         }
 
+        function setTravelMode(mode, btnElement) {
+            document.getElementById("travel-mode").value = mode;
+            document.querySelectorAll(".travel-mode-btn").forEach(b => b.classList.remove("active"));
+            btnElement.classList.add("active");
+            calcolaPercorso();
+        }
+
         function renderGoogleButton() {
             const buttonDiv = document.getElementById("buttonDiv");
             buttonDiv.style.display = "block";
@@ -406,12 +467,21 @@
             autocomplete.addListener("place_changed", () => {
                 const place = autocomplete.getPlace();
                 if (place.geometry && place.geometry.location) {
-                    aggiungiMarkerVerde(place.geometry.location, input.value);
+                    input.style.borderColor = "#137333";
+                    input.style.backgroundColor = "#e6f4ea";
                     if (check) check.style.display = "block";
+                    aggiungiMarkerVerde(place.geometry.location, input.value);
+                    calcolaPercorso();
+                } else {
+                    input.style.borderColor = "#d93025";
+                    input.style.backgroundColor = "#fce8e6";
+                    if (check) check.style.display = "none";
                 }
             });
 
             input.addEventListener("input", () => {
+                input.style.borderColor = "#dadce0";
+                input.style.backgroundColor = "#f8f9fa";
                 if (check) check.style.display = "none";
             });
         }
@@ -428,8 +498,20 @@
                     strokeColor: "#ffffff",
                     strokeWeight: 2
                 },
-                title: title
+                title: title,
+                draggable: true // Permette di trascinare il marker direttamente sul percorso
             });
+
+            marker.addListener('dragend', (event) => {
+                const geocoder = new google.maps.Geocoder();
+                geocoder.geocode({ location: event.latLng }, (results, status) => {
+                    if (status === "OK" && results[0]) {
+                        marker.setTitle(results[0].formatted_address);
+                        calcolaPercorso();
+                    }
+                });
+            });
+
             markersVerdi.push(marker);
         }
 
@@ -441,7 +523,7 @@
             div.innerHTML = `
                 <div class="input-container" style="width:100%;">
                     <span class="input-icon">📍</span>
-                    <input type="text" class="tappa-input" id="${uniqueId}" value="${valore}" placeholder="Tappa intermedia">
+                    <input type="text" class="tappa-input" id="${uniqueId}" value="${valore}" placeholder="Aggiungi un'altra tappa">
                     <span class="status-check" id="check-${uniqueId}">✓</span>
                 </div>
                 <button class="btn-remove-tappa" onclick="this.parentElement.remove(); calcolaPercorso();" title="Rimuovi tappa">×</button>`;
@@ -516,7 +598,6 @@
             }
             routeArrows = [];
 
-            // Aggiunge frecce direzionali lungo il percorso a intervalli regolari orientate con precisione
             for (let i = 5; i < path.length - 5; i += 12) {
                 const current = path[i];
                 const next = path[i + 1];
@@ -590,6 +671,7 @@
             document.getElementById("submit-route").style.display = "block";
             document.getElementById("route-info").style.display = "none";
             document.getElementById("post-calc-controls").style.display = "none";
+            calcolaPercorso();
         }
 
         function importaGPX(event) {
