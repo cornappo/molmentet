@@ -414,21 +414,29 @@
             });
 
             panorama.addListener("position_changed", () => {
-                const pos = panorama.getPosition();
+                let pos = panorama.getPosition();
                 if (pos) {
+                    // Vincola il pallino giallo rigidamente al percorso stabilito se esiste
+                    if (currentRoutePath.length > 0) {
+                        let closestPoint = trovaPuntoPiuVicinoSulPercorso(pos);
+                        if (closestPoint) {
+                            pos = closestPoint;
+                        }
+                    }
+
                     if (!markerGiallo) {
                         markerGiallo = new google.maps.Marker({
                             position: pos,
                             map: map,
                             icon: {
                                 path: google.maps.SymbolPath.CIRCLE,
-                                scale: 9,
+                                scale: 13, // Ingrandito
                                 fillColor: "#fbbc04",
                                 fillOpacity: 1,
                                 strokeColor: "#ffffff",
-                                strokeWeight: 2
+                                strokeWeight: 2.5
                             },
-                            title: "Posizione Street View"
+                            title: "Posizione Street View sul Percorso"
                         });
                     } else {
                         markerGiallo.setPosition(pos);
@@ -459,6 +467,21 @@
 
             calcolaPercorso();
             log("Mappa e servizi inizializzati con successo.");
+        }
+
+        function trovaPuntoPiuVicinoSulPercorso(targetPos) {
+            if (!currentRoutePath || currentRoutePath.length === 0) return null;
+            let closestPoint = currentRoutePath[0];
+            let minDistance = 999999;
+            
+            for (let i = 0; i < currentRoutePath.length; i++) {
+                const dist = google.maps.geometry.spherical.computeDistanceBetween(targetPos, currentRoutePath[i]);
+                if (dist < minDistance) {
+                    minDistance = dist;
+                    closestPoint = currentRoutePath[i];
+                }
+            }
+            return closestPoint;
         }
 
         function setTravelMode(mode, btnElement) {
@@ -613,6 +636,7 @@
                     log(`Percorso calcolato con successo: ${km} km.`);
                 } else {
                     log(`ERRORE calcolo percorso: ${status}`);
+                    currentRoutePath = [];
                     alert("Impossibile calcolare il percorso. Verifica gli indirizzi inseriti.");
                 }
             });
@@ -743,7 +767,7 @@
         }
 
         function importaMyMaps() {
-            const url = prompt("Incolla il link o l'ID della mappa My Maps:");
+            const url = prompt("Incolla il link o l'id della mappa My Maps:");
             if(url) {
                 log("Collegamento My Maps acquisito.");
                 alert("Mappa collegata correttamente.");
