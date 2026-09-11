@@ -134,6 +134,12 @@ function initMap() {
     setupAutocomplete("origin-input", "check-origin");
     setupAutocomplete("destination-input", "check-dest");
 
+    // Imposta valori di default se i campi sono vuoti all'avvio
+    const originInput = document.getElementById("origin-input");
+    const destInput = document.getElementById("destination-input");
+    if (originInput && !originInput.value) originInput.value = "Udine";
+    if (destInput && !destInput.value) destInput.value = "Nimis";
+
     if (typeof google !== 'undefined' && google.accounts) {
         google.accounts.id.initialize({
             client_id: "316037590804-ro5uvmlkhd5im3d610odd9vrkuu004ml.apps.googleusercontent.com",
@@ -148,7 +154,6 @@ function initMap() {
 
 function avviaTimerAnteprima(latLng) {
     cancellaTimerAnteprima();
-    // Richiede ~600ms di pressione prolungata (long-press) per evitare attivazioni accidentali o durante il drag
     longPressTimer = setTimeout(() => {
         mostraAnteprimaStreetView(latLng);
     }, 600);
@@ -307,8 +312,15 @@ function aggiungiTappaDaClick(latLng) {
 
 function calcolaPercorso() {
     allowFreeMovement = false;
-    const origin = document.getElementById("origin-input").value;
-    const destination = document.getElementById("destination-input").value;
+    const origin = document.getElementById("origin-input").value.trim();
+    const destination = document.getElementById("destination-input").value.trim();
+
+    // Se i campi principali sono vuoti, esce silenziosamente senza mostrare errori
+    if (!origin || !destination) {
+        log("Campi di partenza o arrivo vuoti: calcolo percorso saltato.");
+        return;
+    }
+
     const mode = document.getElementById("travel-mode").value;
 
     const tappaInputs = document.querySelectorAll(".tappa-input");
@@ -352,7 +364,7 @@ function calcolaPercorso() {
         } else {
             log(`ERRORE calcolo percorso: ${status}`);
             currentRoutePath = [];
-            alert("Impossibile calcolare il percorso. Verifica gli indirizzi inseriti.");
+            // Nessun alert bloccante mostrato all'utente
         }
     });
 }
