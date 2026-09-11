@@ -164,7 +164,15 @@ function initMap() {
                 markerGiallo.addListener("drag", (event) => {
                     if (currentRoutePath.length > 0) {
                         let closest = trovaPuntoPiuVicinoSulPercorso(event.latLng);
-                        if (closest) markerGiallo.setPosition(closest);
+                        if (closest) {
+                            markerGiallo.setPosition(closest);
+                            
+                            // AGGIORNAMENTO IN TEMPO REALE DURANTE IL DRAG
+                            isUpdatingFromMap = true;
+                            panorama.setPosition(closest);
+                            isUpdatingFromMap = false;
+                            aggiornaIndicePercorsoPiuVicino(closest);
+                        }
                     }
                 });
 
